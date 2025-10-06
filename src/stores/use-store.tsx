@@ -1,20 +1,21 @@
-// /src//useStore.ts
-import {create,StateCreator} from 'zustand';
-import { devtools ,DevtoolsOptions} from 'zustand/middleware';
+// /src/useStore.ts
+import { create } from 'zustand';
+import { createJSONStorage ,persist} from 'zustand/middleware';
 
 type Store = {
-  count: number;
-  increase: () => void;
-  decrease: () => void;
+  isSidebarOpen: boolean;
+  toggleSidebar: () => void;
 };
 
-// Wrap the store creation in devtools correctly
+// Zustand store without persistence to localStorage
 const useStore = create<Store>()(
-  devtools((set) => ({
-    count: 0,
-    increase: () => set((state) => ({ count: state.count + 1 })),
-    decrease: () => set((state) => ({ count: state.count - 1 })),
-  }),{name : "count"}) // devtools setup with a name for debugging
+  persist(
+    (set) => ({
+      isSidebarOpen: false, // Initial state set to false
+      toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })), // Toggle sidebar state
+    }),
+    { name: 'sidebarStore' } // devtools setup with a name for debugging
+  )
 );
 
 export default useStore;

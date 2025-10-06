@@ -24,7 +24,7 @@ const FooterHome = () => {
           <div
         className="w-32 h-12 bg-white"
         style={{
-          maskImage: 'url("/images/logo-rumah-umkm.png")',
+          maskImage: 'url("/images/logo_rdku.svg")',
           maskSize: 'contain',
           maskRepeat: 'no-repeat',
           maskPosition: 'center center'

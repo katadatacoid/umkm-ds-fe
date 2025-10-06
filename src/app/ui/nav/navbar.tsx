@@ -19,7 +19,7 @@ export default function Navbar() {
           {/* Logo */}
           <div className="shrink-0">
             <Image 
-              src="/images/logo-rumah-umkm.png" 
+              src="/images/logo_rdku.svg" 
               alt="Rumah UMKM Logo" 
               width={129} 
               height={48} 

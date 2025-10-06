@@ -1,23 +1,19 @@
-import Navbar from "@/app/ui/nav/navbar";
-import {
-  SectionHome1,
-  SectionHome2,
-  SectionHome3,
-  SectionPrice,
-  FooterHome,
-  SectionTestotemoni,
-  SectionAffiliate,
-  SectionJoinWithUs,
-} from "@/app/ui/section/section"; // Assuming the index.ts is located inside the ui folder
+
+import Link from "next/link";
 
 
 export default function Home() {
   return (
     <>
-    Hello Ini Dashboard
+      <Link href={'/xxx'}>
+        <button type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">Admin</button>
+      </Link>
+      <p></p>
+
+      <Link href={'/user'}>
+        <button type="button" className="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800">User</button>
+      </Link>
 
     </>
-
-
   );
 }

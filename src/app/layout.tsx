@@ -14,7 +14,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Rumah Digital",
+  title: "Dashboard Rumah Digital",
   description: "Your digital solution for UMKM",
 };
 
