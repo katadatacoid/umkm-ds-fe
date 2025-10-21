@@ -54,6 +54,13 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
       })
     );
 
+    chart.set(
+      "cursor",
+      am5xy.XYCursor.new(root, {
+        behavior: "none",
+      })
+    );
+
     const xAxis = chart.xAxes.push(
       am5xy.CategoryAxis.new(root, {
         categoryField: "month",
@@ -68,7 +75,7 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
     );
 
     const series = chart.series.push(
-      am5xy.LineSeries.new(root, {
+      am5xy.SmoothedXLineSeries.new(root, {
         name: title,
         xAxis,
         yAxis,
@@ -83,48 +90,69 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
       })
     );
 
-    series.strokes.template.setAll({
-      strokeWidth: 3,
-    });
+    series.strokes.template.setAll({ strokeWidth: 3 });
 
+    const gradient = am5.LinearGradient.new(root, {
+      stops: [
+        { opacity: 0.4, color: am5.color(color) },
+        { color: am5.color(0xffffff), opacity: 0.1 },
+      ],
+    });
     series.fills.template.setAll({
-      fillOpacity: 0.3,
+      fillGradient: gradient,
       visible: true,
     });
 
+    // series.bullets.push(() =>
+    //   am5.Bullet.new(root, {
+    //     sprite: am5.Circle.new(root, {
+    //       radius: 5,
+    //       fill: series.get("fill"),
+    //       stroke: root.interfaceColors.get("background"),
+    //       strokeWidth: 2,
+    //       tooltipText:
+    //         "[#B0B0B0 fontSize: 13px]{categoryX} " +
+    //         selectedYear +
+    //         "[/]\n[#FFFFFF bold fontSize: 16px]{valueY.formatNumber('#,###')}[/]",
+    //     }),
+    //   })
+    // );
     series.bullets.push(() =>
       am5.Bullet.new(root, {
         sprite: am5.Circle.new(root, {
           radius: 5,
-          fill: series.get("fill"),
-          stroke: root.interfaceColors.get("background"),
+          fill: am5.color(color),
+          stroke: am5.color("#fff"),
           strokeWidth: 2,
-          tooltipText:
-            "[#B0B0B0 fontSize: 13px]{categoryX} " +
-            selectedYear +
-            "[/]\n[#FFFFFF bold fontSize: 16px]{valueY.formatNumber('#,###')}[/]",
         }),
+        dynamic: true,
       })
     );
 
-    // Configure tooltip styling
+    // Custom tooltip with dark background
     const tooltip = am5.Tooltip.new(root, {
-      pointerOrientation: "down",
       getFillFromSprite: false,
       getStrokeFromSprite: false,
       autoTextColor: false,
+      pointerOrientation: "down",
+      labelText:
+        "[fontSize: 14px; #FFFFFF]{categoryX} " +
+        selectedYear +
+        "\n[bold fontSize: 18px]{valueY.formatNumber('#,###')}[/]",
     });
 
-    tooltip.get("background")?.setAll({
+    tooltip.get("background").setAll({
       fill: am5.color("#0A1B49"),
-      fillOpacity: 1,
       strokeOpacity: 0,
+      fillOpacity: 1,
+      cornerRadius: 6,
     });
 
     tooltip.label.setAll({
       textAlign: "center",
-      paddingTop: 12,
-      paddingBottom: 12,
+      fill: am5.color("#FFFFFF"),
+      paddingTop: 10,
+      paddingBottom: 10,
       paddingLeft: 16,
       paddingRight: 16,
     });
@@ -163,18 +191,29 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
 
     // Update bullets tooltip text
     series.bullets.clear();
+    // series.bullets.push(() =>
+    //   am5.Bullet.new(root, {
+    //     sprite: am5.Circle.new(root, {
+    //       radius: 5,
+    //       fill: series.get("fill"),
+    //       stroke: root.interfaceColors.get("background"),
+    //       strokeWidth: 2,
+    //       tooltipText:
+    //         "[#B0B0B0 fontSize: 13px]{categoryX} " +
+    //         selectedYear +
+    //         "[/]\n[#FFFFFF bold fontSize: 16px]{valueY.formatNumber('#,###')}[/]",
+    //     }),
+    //   })
+    // );
     series.bullets.push(() =>
       am5.Bullet.new(root, {
         sprite: am5.Circle.new(root, {
           radius: 5,
-          fill: series.get("fill"),
-          stroke: root.interfaceColors.get("background"),
+          fill: am5.color(color),
+          stroke: am5.color("#fff"),
           strokeWidth: 2,
-          tooltipText:
-            "[#B0B0B0 fontSize: 13px]{categoryX} " +
-            selectedYear +
-            "[/]\n[#FFFFFF bold fontSize: 16px]{valueY.formatNumber('#,###')}[/]",
         }),
+        dynamic: true,
       })
     );
 
@@ -260,7 +299,7 @@ const Demo = () => {
 
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
-      <h1 className="text-2xl font-bold mb-6">Affiliate Chart Demo</h1>
+      {/* <h1 className="text-2xl font-bold mb-6">Affiliate Chart Demo</h1> */}
       <AffiliateChart
         data={sampleData}
         years={["2023", "2024", "2025"]}

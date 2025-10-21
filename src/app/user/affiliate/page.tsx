@@ -6,6 +6,9 @@ import HeadSummary from "@/app/ui/headers/header-summary";
 import StatsSection from "@/app/ui/section/seaction-stat";
 import DemoTableRecentUMKm from "../table-new-product";
 import AffiliateChart from "@/app/ui/charts/affiliate-chart";
+import WithdrawCard from "@/app/ui/card/withdraw-card";
+import ReferralCard from "@/app/ui/card/referral-card";
+import TransactionHistoryTable from "./transaction-history-table";
 
 const AffiliateUser = () => {
   const statsData = [
@@ -105,7 +108,22 @@ const AffiliateUser = () => {
           />
         </div>
 
-        <DemoTableRecentUMKm title="Produk baru ditambahkan" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+          <ReferralCard
+            referralCode="RUMAH2025-USER123"
+            totalReferrals={4}
+            onCopyLink={() => console.log("Referral link copied")}
+          />
+          <WithdrawCard
+            balance={175000}
+            minWithdraw={100000}
+            processDays="1-3"
+            onWithdraw={() => console.log("Withdraw clicked")}
+          />
+        </div>
+
+        {/* Transaction History Table */}
+        <TransactionHistoryTable />
       </DashboardUserLayout>
     </div>
   );
