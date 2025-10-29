@@ -1,37 +1,26 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import DashboardUserLayout from "@/app/ui/layout/ds-user-layout";
 import StatsSection from "@/app/ui/section/seaction-stat";
 import HeadSummary from "@/app/ui/headers/header-summary";
 import DemoTableProducts from "./table-products";
 import { usePathname, useRouter } from "next/navigation";
+import { useUserProductsStore } from "@/stores/use-user-products-store";
 
 const ManagementProductsUser: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
 
-  const statsData = [
-    {
-      title: "Total Produk",
-      value: 50,
-      description: "Jumlah keseluruhan produk yang telah ditambahkan.",
-    },
-    {
-      title: "Produk Aktif",
-      value: 40,
-      description: "Produk yang saat ini aktif.",
-    },
-    {
-      title: "Produk Non-Aktif",
-      value: 10,
-      description: "Produk yang tidak aktif.",
-    },
-  ];
+  const { statsData, fetchProductsData } = useUserProductsStore();
 
   const handleAddClick = () => {
     router.push(`${pathname}/add`);
   };
+
+  useEffect(() => {
+    fetchProductsData();
+  }, [fetchProductsData]);
 
   return (
     <DashboardUserLayout path="user">
