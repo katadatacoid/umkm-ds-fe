@@ -130,7 +130,7 @@ export default function TransactionHistoryTable() {
       <div className="flex flex-wrap items-center justify-between mb-4">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">Riwayat Transaksi</h2>
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-gray-600 mb-2">
             Detail komisi dari setiap referral yang berhasil mendaftar
           </p>
         </div>
@@ -160,7 +160,7 @@ export default function TransactionHistoryTable() {
         getRowId={(row) => row.id}
         isLoading={false}
         error={null}
-        pageSize={5}
+        pageSizes={[10, 25, 50, 100]}
       />
     </div>
   );

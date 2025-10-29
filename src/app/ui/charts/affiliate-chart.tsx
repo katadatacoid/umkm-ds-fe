@@ -61,10 +61,18 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
       })
     );
 
+    const xRenderer = am5xy.AxisRendererX.new(root, { minGridDistance: 30 });
+    xRenderer.labels.template.setAll({
+      fontSize: 12,
+      fill: am5.color("#6B7280"), // abu-abu netral
+      oversizedBehavior: "none", // cegah label hilang
+      textAlign: "center",
+    });
+
     const xAxis = chart.xAxes.push(
       am5xy.CategoryAxis.new(root, {
         categoryField: "month",
-        renderer: am5xy.AxisRendererX.new(root, { minGridDistance: 30 }),
+        renderer: xRenderer,
       })
     );
 
@@ -141,12 +149,22 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
         "\n[bold fontSize: 18px]{valueY.formatNumber('#,###')}[/]",
     });
 
-    tooltip.get("background").setAll({
-      fill: am5.color("#0A1B49"),
-      strokeOpacity: 0,
-      fillOpacity: 1,
-      cornerRadius: 6,
-    });
+    // tooltip.get("background").setAll({
+    //   fill: am5.color("#0A1B49"),
+    //   strokeOpacity: 0,
+    //   fillOpacity: 1,
+    //   cornerRadius: 6,
+    // });
+
+    const bg = tooltip.get("background");
+    if (bg && "setAll" in bg) {
+      (bg as unknown as { setAll: (props: Record<string, unknown>) => void }).setAll({
+        fill: am5.color("#0A1B49"),
+        strokeOpacity: 0,
+        fillOpacity: 1,
+        cornerRadius: 6,
+      });
+    }
 
     tooltip.label.setAll({
       textAlign: "center",
@@ -191,20 +209,7 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
 
     // Update bullets tooltip text
     series.bullets.clear();
-    // series.bullets.push(() =>
-    //   am5.Bullet.new(root, {
-    //     sprite: am5.Circle.new(root, {
-    //       radius: 5,
-    //       fill: series.get("fill"),
-    //       stroke: root.interfaceColors.get("background"),
-    //       strokeWidth: 2,
-    //       tooltipText:
-    //         "[#B0B0B0 fontSize: 13px]{categoryX} " +
-    //         selectedYear +
-    //         "[/]\n[#FFFFFF bold fontSize: 16px]{valueY.formatNumber('#,###')}[/]",
-    //     }),
-    //   })
-    // );
+
     series.bullets.push(() =>
       am5.Bullet.new(root, {
         sprite: am5.Circle.new(root, {
@@ -275,7 +280,7 @@ const AffiliateChart: React.FC<AffiliateChartProps> = ({
         )}
       </div>
 
-      <div ref={chartDivRef} style={{ width: "100%", height: `${height}px` }} />
+      <div ref={chartDivRef} style={{ width: "100%", height: `${height}px`, minWidth: "600px" }} />
     </div>
   );
 };
@@ -313,4 +318,5 @@ const Demo = () => {
   );
 };
 
-export default Demo;
+export default AffiliateChart;
+export { Demo };
