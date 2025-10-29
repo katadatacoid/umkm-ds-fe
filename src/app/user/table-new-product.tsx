@@ -1,71 +1,42 @@
-// for Client component
 "use client";
 
-import DataTable, { Column } from "@/app/ui/datatables/datatable";
-import { useMemo } from "react";
+import DataTable, { Column, classNames } from "@/app/ui/datatables/datatable";
+import { useMemo, useEffect } from "react";
 import Image from "next/image";
+import { useUserProductsStore } from "@/stores/use-user-products-store";
+import { useRouter } from "next/navigation";
 
 type Product = {
   id: number;
   image: string;
   name: string;
   price: number;
-  description: string;
+  description?: string;
+  date?: string;
+  status: "aktif" | "non-aktif";
 };
-
-// Kamu bisa ubah / tambah produk di sini nanti
-const products: Product[] = [
-  {
-    id: 1,
-    image: "/images/user/product-1.jpg", // gunakan path lokal public/images/user
-    name: "Biazer Edith House",
-    price: 455000,
-    description:
-      "Produk eksklusif dengan bahan premium dan desain elegan untuk tampilan modern sehari-hari.",
-  },
-  {
-    id: 2,
-    image: "/images/user/product-2.jpg",
-    name: "Fendro Classic Bag",
-    price: 515000,
-    description:
-      "Tas tangan bergaya klasik yang cocok untuk berbagai acara, terbuat dari kulit sintetis berkualitas.",
-  },
-  {
-    id: 3,
-    image: "/images/user/product-3.jpg",
-    name: "Vintora Casual Shirt",
-    price: 325000,
-    description:
-      "Kemeja santai berbahan katun lembut, memberikan kenyamanan maksimal sepanjang hari.",
-  },
-  {
-    id: 4,
-    image: "/images/user/product-4.jpg",
-    name: "Lumina Watch",
-    price: 735000,
-    description:
-      "Jam tangan elegan dengan tali stainless steel dan fitur water-resistant hingga 30 meter.",
-  },
-  {
-    id: 5,
-    image: "/images/user/product-5.jpg",
-    name: "Calyra Sneakers",
-    price: 595000,
-    description:
-      "Sepatu kasual dengan desain modern dan sol empuk yang cocok untuk aktivitas harian.",
-  },
-];
 
 interface DemoTableRecentProductProps {
   title: string;
+  description: string;
 }
 
-function shortText(text: string, max = 50) {
+function shortText(text: string, max = 30) {
   return text.length <= max ? text : text.slice(0, max) + "...";
 }
 
-export default function DemoTableRecentProduct({ title }: DemoTableRecentProductProps) {
+export default function DemoTableRecentProduct({
+  title,
+  description,
+}: DemoTableRecentProductProps) {
+  const router = useRouter();
+  const { products, fetchProductsData } = useUserProductsStore();
+
+  // Fetch data when this component mounts
+  useEffect(() => {
+    fetchProductsData();
+  }, [fetchProductsData]);
+
   const columns = useMemo<Column<Product>[]>(
     () => [
       {
@@ -97,9 +68,31 @@ export default function DemoTableRecentProduct({ title }: DemoTableRecentProduct
         render: (v) => `Rp ${v.toLocaleString("id-ID")}`,
       },
       {
+        key: "date",
+        header: "Tanggal",
+        width: "120px",
+        render: (v) => v || "-",
+      },
+      {
         key: "description",
         header: "Deskripsi",
-        render: (v) => shortText(v, 60),
+        render: (v) => shortText(v, 30),
+      },
+      {
+        key: "status",
+        header: "Status",
+        width: "120px",
+        render: (v) => (
+          <span
+            className={classNames(
+              "rounded-full px-2 py-1 text-xs font-medium",
+              v === "aktif" && "bg-emerald-50 text-emerald-700",
+              v === "non-aktif" && "bg-gray-200 text-gray-600"
+            )}
+          >
+            {v === "aktif" ? "Aktif" : "Nonaktif"}
+          </span>
+        ),
       },
     ],
     []
@@ -107,7 +100,10 @@ export default function DemoTableRecentProduct({ title }: DemoTableRecentProduct
 
   return (
     <div className="max-w-full px-0 py-5" style={{ width: "calc(100%)" }}>
-      <h2 className="text-sm sm:text-base font-semibold text-gray-700 mt-3 sm:mb-4">{title}</h2>
+      <div className="mb-4">
+        <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+        <p className="text-sm text-gray-500 mt-1">{description}</p>
+      </div>
 
       <DataTable<Product>
         rows={products}
@@ -117,26 +113,12 @@ export default function DemoTableRecentProduct({ title }: DemoTableRecentProduct
         selectable
         rowActions={[
           {
-            label: (
-              <button
-                className="px-3 py-1 text-[13px] rounded-md bg-white transition cursor-pointer"
-                onClick={() => {}}
-              >
-                Ubah
-              </button>
-            ),
-            onClick: (row) => alert(`Ubah produk id ${(row as any).id}`),
+            label: "Ubah",
+            onClick: (row) => router.push(`/user/products-management/edit/${row.id}?from=beranda`),
           },
           {
-            label: (
-              <button
-                className="px-3 py-1 text-[13px] rounded-md bg-white transition cursor-pointer"
-                onClick={() => {}}
-              >
-                Hapus
-              </button>
-            ),
-            onClick: (row) => alert(`Hapus produk id ${(row as any).id}`),
+            label: "Hapus",
+            onClick: (row) => alert(`Hapus produk id ${row.id}`),
           },
         ]}
         getRowId={(row) => row.id}

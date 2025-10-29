@@ -12,6 +12,7 @@ import {
   faShareAlt,
   faUser,
   faUsers,
+  faBoxOpen,
 } from "@fortawesome/free-solid-svg-icons";
 import { usePathname } from "next/navigation";
 import useStore from "@/stores/use-store";
@@ -60,7 +61,7 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
     { href: `/${path}`, icon: faHome, label: "Beranda", hasDivider: false },
     {
       href: `/${path}/products-management`,
-      icon: faUsers,
+      icon: faBoxOpen,
       label: "Product Management",
       hasDivider: false,
     },
@@ -77,7 +78,7 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
   console.log(pathname);
 
   return (
-    // 🔧 Full-height container; konten scroll, navbar fixed
+    //  Full-height container; konten scroll, navbar fixed
     <div className="relative flex h-screen overflow-hidden bg-gray-100">
       {/* Sidebar */}
 
