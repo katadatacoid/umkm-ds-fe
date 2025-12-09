@@ -1,29 +1,53 @@
 'use client'
 
-import React from "react";
-import DashboardAdminLayout from "@/app/ui/layout/ds-admin-layout"; // Import DashboardLayout
+import React, { useState, useEffect } from "react";
+import DashboardAdminLayout from "@/app/ui/layout/ds-admin-layout";
 import StatsSection from "@/app/ui/section/seaction-stat";
 import HeadSummary from "@/app/ui/headers/header-summary";
 import DemoTableUsers from "./table-users";
 import { usePathname, useRouter } from 'next/navigation';
+import { umkmAPI } from '@/lib/api';
 
 const ManagementUsersAdmin: React.FC = () => {
+  const router = useRouter();
+  const pathname = usePathname();
+  
+  const [searchInput, setSearchInput] = useState("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0
+  });
 
-  const router = useRouter();  // Call useRouter at the top level
-  const pathname = usePathname(); // Hook to access the current path
+  // Fetch stats dari API
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const response = await umkmAPI.getAllWithSubscription();
+        if (response.stats) {
+          setStats(response.stats);
+        }
+      } catch (error) {
+        console.error('Error fetching stats:', error);
+      }
+    };
+
+    fetchStats();
+  }, []);
 
   const statsData = [
     {
       title: "Total UMKM Aktif",
-      value: 956,
+      value: stats.active,
       percentage: 15,
       description: "Jumlah UMKM yang aktif menggunakan platform ini.",
     },
     {
-      title: "Total Umkm Tidak Aktif",
-      value: "150",
+      title: "Total UMKM Tidak Aktif",
+      value: stats.inactive,
       percentage: -2,
-      description: "UMKM yang mendaftar tapi belum aktif.",
+      description: "UMKM yang terdaftar tapi tidak aktif.",
     },
   ];
 
@@ -32,11 +56,23 @@ const ManagementUsersAdmin: React.FC = () => {
     router.push(`${pathname}/add`);
   };
 
+  //Handler untuk search (jika HeadSummary support onSearchChange di mode button)
+  const handleSearch = (value: string) => {
+    setSearchInput(value);
+  };
+
+  //Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log("Search query set to:", searchInput);
+      setSearchQuery(searchInput);
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchInput]);
 
   return (
-    <DashboardAdminLayout
-      path="xxx"
-    >
+    <DashboardAdminLayout path="xxx">
       <HeadSummary
         title="Overview"
         updatedAt="Baru saja"
@@ -44,13 +80,13 @@ const ManagementUsersAdmin: React.FC = () => {
         buttonLabel="Tambah UMKM Baru"
         onButtonClick={handleAddClick}
       />
-      {/* Custom content for this page */}
+      
       <StatsSection
-        // title="Ringkasan Aktivitas"
         stats={statsData}
         className="mt-5"
       />
-      <DemoTableUsers/>
+      
+      <DemoTableUsers searchQuery={searchQuery} />
     </DashboardAdminLayout>
   );
 };

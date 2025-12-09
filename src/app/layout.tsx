@@ -1,35 +1,36 @@
-import type { Metadata } from "next";
+import type { Metadata } from 'next';
 import { Inter } from "next/font/google";
-import "./globals.css";
-
+import './globals.css';
+import AuthGuard from '@/components/AuthGuard';
 
 import { config } from '@fortawesome/fontawesome-svg-core'
 import '@fortawesome/fontawesome-svg-core/styles.css'
 config.autoAddCss = false
 
-// Using next/font to load the Inter font
 const inter = Inter({
-  weight: '500',
+  weight: ['500'], 
   subsets: ['latin'],
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard Rumah Digital",
-  description: "Your digital solution for UMKM",
+  title: 'UMKM Dashboard',
+  description: 'Dashboard for UMKM Management',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
     <html lang="id" className={inter.className}>
       <head>
         {/* Metadata and link to external resources should go here */}
       </head>
       <body className="antialiased">
-        {children}
+        <AuthGuard>
+          {children}
+        </AuthGuard>
       </body>
     </html>
   );
