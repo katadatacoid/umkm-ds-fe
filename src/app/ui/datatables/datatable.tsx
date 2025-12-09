@@ -17,7 +17,7 @@ export type Person = {
 export type SortState<T> = { key: keyof T, dir: 'asc' | 'desc' } | null
 
 // ------------------------------------------------------------
-// Utilities (pure helpers) — also used by inline tests
+// Utilities (pure helpers)
 // ------------------------------------------------------------
 export function classNames(...xs: (string | false | null | undefined)[]) {
     return xs.filter(Boolean).join(' ')
@@ -97,27 +97,6 @@ export function downloadCSV(filename: string, rows: object[]) {
 }
 
 // ------------------------------------------------------------
-// Demo Data (replace with your fetch)
-// ------------------------------------------------------------
-function useDemoData() {
-    const [data, setData] = useState<Person[]>([])
-    useEffect(() => {
-        const roles = ['Admin', 'Editor', 'Viewer'] as const
-        const teams = ['Alpha', 'Bravo', 'Charlie', 'Delta']
-        const arr: Person[] = Array.from({ length: 137 }).map((_, i) => ({
-            id: i + 1,
-            name: `User ${i + 1}`,
-            email: `user${i + 1}@example.com`,
-            role: roles[i % roles.length],
-            team: teams[i % teams.length],
-            createdAt: new Date(Date.now() - i * 86400000).toISOString(),
-        }))
-        setData(arr)
-    }, [])
-    return data
-}
-
-// ------------------------------------------------------------
 // DataTable Component
 // ------------------------------------------------------------
 export interface Column<T> {
@@ -138,24 +117,17 @@ interface DataTableProps<T> {
     initialSort?: SortState<T>
     pageSizes?: number[]
     searchableKeys?: (keyof T)[]
-    /** Show selection checkboxes and a bulk bar */
     selectable?: boolean
-    /** Optional per-row actions (rendered as small buttons on desktop, inline in cards on mobile) */
     rowActions?: RowAction<T>[]
-    /** Row click handler (ignored when clicking a control) */
     onRowClick?: (row: T) => void
-    /** Controlled key extractor; defaults to (row as any).id ?? index */
     getRowId?: (row: T, index: number) => string | number
-    /** Loading / error states */
     isLoading?: boolean
     error?: string | null
-    /** Export behavior */
     exportMode?: 'filtered' | 'page' | 'selected'
     exportColumns?: { key: keyof T; header?: string; map?: (value: any, row: T) => any }[]
     filename?: string
-    /** If provided, export will fetch from this provider (e.g., server-side full dataset) */
     onExportAll?: () => Promise<T[]>
-    showToolbar?: boolean // New prop to control toolbar visibility
+    showToolbar?: boolean
 }
 
 export default function DataTable<T extends Record<string, any>>({
@@ -174,7 +146,7 @@ export default function DataTable<T extends Record<string, any>>({
     exportColumns,
     filename = 'table.csv',
     onExportAll,
-    showToolbar = true, // Default to true to show the toolbar
+    showToolbar = true,
 }: DataTableProps<T>) {
     const [query, setQuery] = useState('')
     const [sort, setSort] = useState<SortState<T>>(initialSort)
@@ -235,7 +207,6 @@ export default function DataTable<T extends Record<string, any>>({
     const [exporting, setExporting] = useState(false)
     const columnsForExport = useMemo(() => {
         if (exportColumns?.length) return exportColumns
-        // default: mirror visible columns order
         return columns.map((c) => ({ key: c.key, header: c.header }))
     }, [exportColumns, columns])
 
@@ -254,23 +225,59 @@ export default function DataTable<T extends Record<string, any>>({
         return () => { ro?.disconnect(); window.removeEventListener('resize', onResize) }
     }, [paged, columns, pageSize, query, sort, isLoading])
 
+    // Check if export should be disabled
+    const isExportDisabled = useMemo(() => {
+        if (exporting) return true
+        
+        // Jika mode 'selected', hanya disable jika tidak ada data sama sekali
+        // (bukan hanya tidak ada yang dipilih, karena user bisa export all filtered)
+        if (exportMode === 'selected') {
+            // Jika ada selection, cek apakah ada yang dipilih
+            // Jika tidak ada selection, fallback ke filtered data
+            return selected.size === 0 && sorted.length === 0
+        }
+        
+        // Untuk mode 'page', disable jika halaman kosong
+        if (exportMode === 'page') {
+            return paged.length === 0
+        }
+        
+        // Untuk mode 'filtered' (default), disable jika hasil filter kosong
+        if (exportMode === 'filtered') {
+            return sorted.length === 0
+        }
+        
+        return false
+    }, [exporting, exportMode, selected.size, paged.length, sorted.length])
+
     async function handleExport() {
         try {
             setExporting(true)
             let data: T[]
             if (onExportAll) {
-                // Server-provided full dataset
                 data = await onExportAll()
             } else {
-                // Client-side export from what we have
-                if (exportMode === 'selected' && selected.size) {
-                    data = paged.filter((row, i) => selected.has(keyOf(row, i)))
+                // Untuk mode 'selected', export selected jika ada, fallback ke filtered
+                if (exportMode === 'selected') {
+                    if (selected.size > 0) {
+                        // Export hanya yang dipilih
+                        data = sorted.filter((row, i) => selected.has(keyOf(row, i)))
+                    } else {
+                        // Jika tidak ada yang dipilih, export semua filtered data
+                        data = sorted
+                    }
                 } else if (exportMode === 'page') {
                     data = paged
                 } else {
                     data = sorted
                 }
             }
+            
+            if (data.length === 0) {
+                console.warn('No data to export')
+                return
+            }
+            
             const csv = toCSV<T>(columnsForExport as any, data)
             saveCSV(filename, csv)
         } finally {
@@ -291,13 +298,11 @@ export default function DataTable<T extends Record<string, any>>({
                     <span><strong>{selected.size}</strong> selected</span>
                     <div className="flex items-center gap-2">
                         <button onClick={() => setSelected(new Set())} className="rounded-lg border border-emerald-300 px-2 py-1 text-xs hover:bg-emerald-100">Clear</button>
-                        {/* Example bulk action hook point */}
                     </div>
                 </div>
             )}
 
             {/* Toolbar */}
-            {/* Toolbar (Conditionally rendered) */}
             {showToolbar && (
                 <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
@@ -314,8 +319,9 @@ export default function DataTable<T extends Record<string, any>>({
                         <div className="flex gap-2">
                             <button
                                 onClick={handleExport}
-                                disabled={exporting}
-                                className="flex-1 sm:flex-none rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm hover:bg-gray-50 disabled:opacity-50"
+                                disabled={isExportDisabled}
+                                className="flex-1 sm:flex-none rounded-xl border border-gray-300 px-3 py-2 text-sm shadow-sm hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                title={isExportDisabled ? 'No data to export' : 'Export to CSV'}
                             >
                                 {exporting ? 'Exporting…' : 'Export CSV'}
                             </button>
@@ -436,7 +442,6 @@ export default function DataTable<T extends Record<string, any>>({
                                                             isSorted && dir === 'asc' && 'rotate-180'
                                                         )}
                                                     >
-                                                        {/* caret icon */}
                                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 group-hover:text-gray-600">
                                                             <polyline points="6 9 12 15 18 9" />
                                                         </svg>
@@ -445,7 +450,6 @@ export default function DataTable<T extends Record<string, any>>({
                                             </th>
                                         )
                                     })}
-                                    {/* Only add Actions column header without sticky */}
                                     {rowActions?.length && (
                                         <th className="px-4 py-3 text-right sticky right-0 bg-white z-10">Actions</th>
                                     )}
@@ -481,7 +485,6 @@ export default function DataTable<T extends Record<string, any>>({
                                                         {c.render ? c.render(row[c.key], row) : String(row[c.key] ?? '')}
                                                     </td>
                                                 ))}
-                                                {/* Sticky Actions Column (only in the body) */}
                                                 {rowActions?.length ? (
                                                     <td className="px-4 py-3 text-right sticky right-0 bg-white z-10">
                                                         <div className="inline-flex gap-2">
@@ -510,10 +513,7 @@ export default function DataTable<T extends Record<string, any>>({
                 </div>
             </div>
 
-
-
-
-            {/* Footer / Pagination (sticky on mobile) */}
+            {/* Footer / Pagination */}
             <div className="sticky bottom-0 z-10 mt-3 flex flex-col items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white/70 p-3 backdrop-blur sm:static sm:rounded-none sm:border-0 sm:bg-transparent sm:p-4 sm:backdrop-blur-0 sm:flex-row">
                 <div className="text-xs text-gray-600 sm:text-sm">
                     Showing <span className="font-medium">{total ? start + 1 : 0}</span> to{' '}
@@ -552,255 +552,6 @@ export default function DataTable<T extends Record<string, any>>({
                     </button>
                 </div>
             </div>
-
-            {/* Developer Test Panel (inline tests) */}
-            {/* <TestPanel /> */}
-        </div>
-    )
-}
-
-// ------------------------------------------------------------
-// Demo Page
-// ------------------------------------------------------------
-export function DemoDataTablePage() {
-    const data = useDemoData()
-
-    const columns = useMemo<Column<Person>[]>(
-        () => [
-            { key: 'id', header: 'ID', width: '80px' },
-            { key: 'name', header: 'Name' },
-            { key: 'email', header: 'Email' },
-            {
-                key: 'role', header: 'Role', width: '120px', render: (v) => (
-                    <span className={classNames(
-                        'rounded-full px-2 py-1 text-xs font-medium',
-                        v === 'Admin' && 'bg-red-50 text-red-700',
-                        v === 'Editor' && 'bg-blue-50 text-blue-700',
-                        v === 'Viewer' && 'bg-emerald-50 text-emerald-700'
-                    )}>{String(v)}</span>
-                )
-            },
-            { key: 'team', header: 'Team', width: '120px' },
-            { key: 'createdAt', header: 'Created', width: '140px', render: (v) => formatDate(String(v)) },
-        ],
-        []
-    )
-
-    return (
-        <main className="mx-auto max-w-7xl p-6">
-            <h1 className="mb-2 text-2xl font-bold tracking-tight">DataTable · Next.js 13+ · TSX · Tailwind</h1>
-            <p className="mb-6 text-gray-600">Sorting, search, pagination, selectable page size, sticky header, zebra rows, CSV export. Replace the demo hook with your fetch logic.</p>
-
-            <DataTable<Person>
-                rows={data}
-                columns={columns}
-                initialSort={{ key: 'id', dir: 'asc' }}
-                searchableKeys={['name', 'email', 'role', 'team']}
-                selectable
-                rowActions={[
-                    { label: 'View', onClick: (row) => alert(`View id ${(row as any).id}`) },
-                    { label: 'Email', onClick: (row) => window.open(`mailto:${(row as any).email}`) },
-                ]}
-                onRowClick={(row) => alert(`Row clicked: ${(row as any).name}`)}
-                getRowId={(row) => (row as any).id}
-                isLoading={false}
-                error={null}
-                exportMode="filtered"
-                filename="people.csv"
-            // 🔌 When you integrate with real data, pass these props:
-            // onExportAll={async () => (await fetch('/api/users/export')).json()} // fetch full dataset from your API
-            // exportColumns={[
-            //   { key: 'id', header: 'ID' },
-            //   { key: 'name', header: 'Name' },
-            //   { key: 'email', header: 'Email' },
-            //   { key: 'role', header: 'Role' },
-            //   { key: 'team', header: 'Team' },
-            //   { key: 'createdAt', header: 'Created', map: (v) => formatDate(String(v)) },
-            // ]}
-            />
-
-            <section className="mt-10 text-sm text-gray-600">
-                <h2 className="mb-2 text-base font-semibold text-gray-800">How to use in Next.js 13+</h2>
-                <ol className="list-inside list-decimal space-y-1">
-                    <li>Install Tailwind: <code>npm i -D tailwindcss postcss autoprefixer</code> then <code>npx tailwindcss init -p</code>.</li>
-                    <li>Configure <code>tailwind.config.js</code> content to scan <code>./app/**/*.{'{'}ts,tsx{'}'}</code>, <code>./components/**/*.{'{'}ts,tsx{'}'}</code>.</li>
-                    <li>Add Tailwind to <code>app/globals.css</code>: <code>@tailwind base; @tailwind components; @tailwind utilities;</code></li>
-                    <li>Create a route at <code>app/datatable/page.tsx</code> and paste this file's default export there.</li>
-                    <li>Replace <code>useDemoData()</code> with your data fetching; pass your rows into <code>DataTable</code>. For exporting **real data** (not demo), implement <code>onExportAll</code> or pass your full rows.</li>
-                    <li>For server data, fetch in a Server Component and pass to a Client DataTable.</li>
-                </ol>
-            </section>
-        </main>
-    )
-}
-
-// ------------------------------------------------------------
-// Inline Test Panel — simple, framework-less checks
-// ------------------------------------------------------------
-function TestPanel() {
-    const [open, setOpen] = useState(false)
-    const [results, setResults] = useState<{ name: string; pass: boolean; detail?: string }[]>([])
-
-    function runTests() {
-        const r: { name: string; pass: boolean; detail?: string }[] = []
-
-        // Test 1: classNames composes and drops falsy
-        try {
-            const got = classNames('a', false, null, undefined, 'b')
-            r.push({ name: 'classNames combines tokens', pass: got === 'a b', detail: `got="${got}"` })
-        } catch (e: any) {
-            r.push({ name: 'classNames combines tokens', pass: false, detail: String(e) })
-        }
-
-        // Test 2: formatDate returns a string
-        try {
-            const d = new Date('2024-01-02T00:00:00.000Z').toISOString()
-            const s = formatDate(d)
-            r.push({ name: 'formatDate returns string', pass: typeof s === 'string', detail: s })
-        } catch (e: any) {
-            r.push({ name: 'formatDate returns string', pass: false, detail: String(e) })
-        }
-
-        // Fixtures for table helpers
-        type Row = { id: number; name?: string | null }
-        const rows: Row[] = [
-            { id: 3, name: 'Charlie' },
-            { id: 1, name: 'Alpha' },
-            { id: 2, name: 'Bravo' },
-            { id: 4, name: null },
-            { id: 5 },
-        ]
-
-        // Test 3: sortRows asc by id
-        try {
-            const got = sortRows(rows, 'id', 'asc').map((x) => x.id).join(',')
-            r.push({ name: 'sortRows asc (number)', pass: got === '1,2,3,4,5', detail: got })
-        } catch (e: any) {
-            r.push({ name: 'sortRows asc (number)', pass: false, detail: String(e) })
-        }
-
-        // Test 4: sortRows desc by id
-        try {
-            const got = sortRows(rows, 'id', 'desc').map((x) => x.id).join(',')
-            r.push({ name: 'sortRows desc (number)', pass: got === '5,4,3,2,1', detail: got })
-        } catch (e: any) {
-            r.push({ name: 'sortRows desc (number)', pass: false, detail: String(e) })
-        }
-
-        // Test 5: sortRows handles null/undefined (asc → nulls first)
-        try {
-            const got = sortRows(rows, 'name', 'asc').map((x) => x.name ?? '∅')
-            const ok = got[0] === '∅' || got[0] === null
-            r.push({ name: 'sortRows null/undefined handling', pass: ok, detail: got.join('|') })
-        } catch (e: any) {
-            r.push({ name: 'sortRows null/undefined handling', pass: false, detail: String(e) })
-        }
-
-        // Test 6: filterRows with empty query returns original
-        try {
-            const got = filterRows(rows, '', ['name']).length
-            r.push({ name: 'filterRows empty query passthrough', pass: got === rows.length, detail: String(got) })
-        } catch (e: any) {
-            r.push({ name: 'filterRows empty query passthrough', pass: false, detail: String(e) })
-        }
-
-        // Test 7: filterRows matches by key
-        try {
-            const got = filterRows(rows, 'brav', ['name']).map((x) => x.name).join(',')
-            r.push({ name: 'filterRows simple match', pass: got.toLowerCase().includes('bravo'), detail: got })
-        } catch (e: any) {
-            r.push({ name: 'filterRows simple match', pass: false, detail: String(e) })
-        }
-
-        // Test 8: paginateRows math
-        try {
-            const big = Array.from({ length: 25 }).map((_, i) => ({ i }))
-            const { pageRows, pages, start, current } = paginateRows(big, 3, 10)
-            const ok = pages === 3 && start === 20 && pageRows.length === 5 && current === 3
-            r.push({ name: 'paginateRows last page', pass: ok, detail: `pages=${pages}, start=${start}, len=${pageRows.length}` })
-        } catch (e: any) {
-            r.push({ name: 'paginateRows last page', pass: false, detail: String(e) })
-        }
-
-        // Test 9: paginateRows first page
-        try {
-            const big2 = Array.from({ length: 25 }).map((_, i) => ({ i }))
-            const { pageRows, pages, start, current } = paginateRows(big2, 1, 10)
-            const ok = pages === 3 && start === 0 && pageRows.length === 10 && current === 1
-            r.push({ name: 'paginateRows first page', pass: ok, detail: `pages=${pages}, start=${start}, len=${pageRows.length}` })
-        } catch (e: any) {
-            r.push({ name: 'paginateRows first page', pass: false, detail: String(e) })
-        }
-
-        // Test 10: filterRows trim + case-insensitive
-        try {
-            const rows2 = [{ name: 'Alpha' }, { name: 'beta' }] as any[]
-            const got = filterRows(rows2 as any, '  ALP  ', ['name' as any]).map((x: any) => x.name).join(',')
-            r.push({ name: 'filterRows trim + case-insensitive', pass: got.toLowerCase().includes('alpha'), detail: got })
-        } catch (e: any) {
-            r.push({ name: 'filterRows trim + case-insensitive', pass: false, detail: String(e) })
-        }
-
-        // Test 11: filterRows with backslash query shouldn't crash and likely returns 0
-        try {
-            const gotLen = filterRows(rows as any, '\\', ['name' as any]).length
-            r.push({ name: 'filterRows backslash query', pass: gotLen === 0, detail: `len=${gotLen}` })
-        } catch (e: any) {
-            r.push({ name: 'filterRows backslash query', pass: false, detail: String(e) })
-        }
-
-        // Test 12: toCSV basic mapping
-        try {
-            const cols = [
-                { key: 'id', header: 'ID' },
-                { key: 'name', header: 'Name', map: (v: any) => String(v ?? '').toUpperCase() },
-            ] as any
-            const csv = toCSV(cols, rows as any)
-            const pass = csv.split('\n')[0] === 'ID,Name' && csv.includes('ALPHA')
-            r.push({ name: 'toCSV headers + map()', pass, detail: csv.split('\n')[1] })
-        } catch (e: any) {
-            r.push({ name: 'toCSV headers + map()', pass: false, detail: String(e) })
-        }
-
-        // Test 13: toCSV quote escaping
-        try {
-            const cols = [{ key: 'name', header: 'Name' }] as any
-            const csv = toCSV(cols, [{ name: 'He said "Hi"' }] as any)
-            r.push({ name: 'toCSV escapes quotes', pass: csv.includes('"He said ""Hi"""'), detail: csv })
-        } catch (e: any) {
-            r.push({ name: 'toCSV escapes quotes', pass: false, detail: String(e) })
-        }
-
-        setResults(r)
-        setOpen(true)
-    }
-
-    return (
-        <div className="mt-8 rounded-2xl border border-dashed border-gray-300 p-4">
-            <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold text-gray-800">Developer Tests</h3>
-                <div className="flex items-center gap-2">
-                    <button onClick={runTests} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">Run tests</button>
-                    <button onClick={() => setOpen((o) => !o)} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-50">{open ? 'Hide' : 'Show'}</button>
-                </div>
-            </div>
-
-            {open && (
-                <ul className="space-y-1">
-                    {results.map((t, i) => (
-                        <li key={i} className="flex items-center gap-2 text-sm">
-                            <span className={classNames('inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium', t.pass ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-700')}>
-                                {t.pass ? 'PASS' : 'FAIL'}
-                            </span>
-                            <span className="font-medium text-gray-800">{t.name}</span>
-                            {t.detail && <span className="text-gray-500">— {t.detail}</span>}
-                        </li>
-                    ))}
-                    {!results.length && (
-                        <li className="text-sm text-gray-500">No results yet. Click <span className="font-medium">Run tests</span>.</li>
-                    )}
-                </ul>
-            )}
         </div>
     )
 }
