@@ -1,4 +1,4 @@
-'use client'
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -89,16 +89,16 @@ const MainDsAdmin: React.FC = () => {
   }, [searchInput]);
 
   const chartData = [
-    { month: 'Jan', umkm: 100, user_aff: 200 },
-    { month: 'Feb', umkm: 200, user_aff: 400 },
-    { month: 'Mar', umkm: 800, user_aff: 450 },
-    { month: 'Apr', umkm: 956, user_aff: 300 },
-    { month: 'May', umkm: 400, user_aff: 500 },
-    { month: 'Jun', umkm: 100, user_aff: 200 },
-    { month: 'Jul', umkm: 200, user_aff: 400 },
-    { month: 'Aug', umkm: 800, user_aff: 450 },
-    { month: 'Sep', umkm: 956, user_aff: 300 },
-    { month: 'Oct', umkm: 400, user_aff: 500 },
+    { month: "Jan", umkm: 100, user_aff: 200 },
+    { month: "Feb", umkm: 200, user_aff: 400 },
+    { month: "Mar", umkm: 800, user_aff: 450 },
+    { month: "Apr", umkm: 956, user_aff: 300 },
+    { month: "May", umkm: 400, user_aff: 500 },
+    { month: "Jun", umkm: 100, user_aff: 200 },
+    { month: "Jul", umkm: 200, user_aff: 400 },
+    { month: "Aug", umkm: 800, user_aff: 450 },
+    { month: "Sep", umkm: 956, user_aff: 300 },
+    { month: "Oct", umkm: 400, user_aff: 500 },
   ];
 
   const seriesNames = ['UMKM', 'User Affiliasi'];
