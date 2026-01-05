@@ -11,7 +11,6 @@ import { useUserProductsStore } from "@/stores/use-user-products-store";
 const ManagementProductsUser: React.FC = () => {
   const router = useRouter();
   const pathname = usePathname();
-
   const { statsData, fetchProductsData } = useUserProductsStore();
 
   const handleAddClick = () => {
@@ -25,21 +24,19 @@ const ManagementProductsUser: React.FC = () => {
   return (
     <DashboardUserLayout path="user">
       <div className="flex flex-col gap-4 sm:gap-6 px-2 sm:px-4 md:px-6 lg:px-8 pb-6">
-        {/* Header */}
+
         <HeadSummary
           title="Produk"
-          updatedAt="3 minutes ago"
+          updatedAt="Baru saja"
           mode="button"
           buttonLabel="Tambah Produk Baru"
           onButtonClick={handleAddClick}
         />
 
-        {/* Statistik */}
         <div className="mt-1">
           <StatsSection stats={statsData} />
         </div>
 
-        {/* Tabel Produk */}
         <div className="mt-3 bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           <DemoTableProducts />
         </div>

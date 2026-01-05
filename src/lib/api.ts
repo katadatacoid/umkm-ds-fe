@@ -28,7 +28,6 @@ export interface Subscription {
   transaction: Transaction | null;
 }
 
-// NEW: User Type
 export interface User {
   id: string;
   name: string;
@@ -62,7 +61,7 @@ export interface UMKM {
   city?: string | null;
   sector?: string | null;
   turnover?: string | null;
-  user?: User | null; // Data dari tabel users
+  user?: User | null;
   subscription?: Subscription;
 }
 
@@ -91,7 +90,6 @@ export interface AuthCode {
   expires_in: number;
 }
 
-// Dashboard Stats Interface
 export interface DashboardStats {
   activeUmkm: number;
   monthlyTransactions: number;
@@ -101,17 +99,96 @@ export interface DashboardStats {
   newUsersPercentage: number;
 }
 
-//  Helper function to get token from localStorage
+// NEW: Product Types
+export interface CatalogPhoto {
+  id: string;
+  catalog_id: string;
+  path: string;
+  file_name: string;
+  file_size?: number | null;
+  mime_type?: string | null;
+  width?: number | null;
+  height?: number | null;
+  alt_text?: string | null;
+  caption?: string | null;
+  order: number;
+  is_primary?: boolean | null;
+  status?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface Product {
+  id: string;
+  user_product_id: string;
+  category_id?: string | null;
+  name: string;
+  slug: string;
+  description?: string | null;
+  current_price: number;
+  original_price?: number | null;
+  status: string; // "published" | "draft"
+  ecommerce_links?: any;
+  is_on_sale: boolean;
+  created_at: string;
+  updated_at: string;
+  catalog_photos: CatalogPhoto[];
+}
+
+export interface ProductsResponse {
+  success: boolean;
+  count: number;
+  data: Product[];
+}
+
+export interface ProductResponse {
+  success: boolean;
+  data: Product;
+}
+
+export interface UserDashboardStats {
+  total: number;
+  active: number;
+  nonActive: number;
+}
+
+export interface UserDashboardResponse {
+  success: boolean;
+  data: UserDashboardStats;
+}
+
+// Tambahkan interface ini di bagian Types
+export interface Template {
+  id: number;
+  nama_template: string;
+  deskripsi?: string | null;
+  kategori?: string | null;
+  preview_image?: string | null;
+  created_at?: string;
+}
+
+export interface TemplatesResponse {
+  success: boolean;
+  data: Template[];
+  count: number;
+}
+interface DecodedToken {
+  user_id: string;
+  email: string;
+  name: string;
+  scope?: string;
+}
+
+// Helper function to get token
 const getAccessToken = (): string | null => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('access_token');
-    console.log('Getting token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
+    //console.log('Getting token:', token ? `${token.substring(0, 20)}...` : 'NO TOKEN');
     return token;
   }
   return null;
 };
 
-//  Helper function to get refresh token
 const getRefreshToken = (): string | null => {
   if (typeof window !== 'undefined') {
     return localStorage.getItem('refresh_token');
@@ -119,7 +196,6 @@ const getRefreshToken = (): string | null => {
   return null;
 };
 
-//  Helper function to get token expiry time
 const getTokenExpiry = (): number | null => {
   if (typeof window !== 'undefined') {
     const expiry = localStorage.getItem('token_expiry');
@@ -128,20 +204,17 @@ const getTokenExpiry = (): number | null => {
   return null;
 };
 
-//  Helper function to save tokens with expiry
 export const saveTokens = (tokens: AuthTokens) => {
   if (typeof window !== 'undefined') {
-    console.log('Saving tokens:', tokens);
+    // console.log('Saving tokens:', tokens);
     localStorage.setItem('access_token', tokens.access_token);
     localStorage.setItem('refresh_token', tokens.refresh_token);
     
-    // Simpan waktu expiry (sekarang + expires_in dalam detik)
     const expiryTime = Date.now() + (tokens.expires_in * 1000);
     localStorage.setItem('token_expiry', expiryTime.toString());
   }
 };
 
-//  Helper function to clear tokens
 export const clearTokens = () => {
   if (typeof window !== 'undefined') {
     console.log('Clearing tokens');
@@ -151,19 +224,39 @@ export const clearTokens = () => {
   }
 };
 
-//  Helper function to check if token is expired or about to expire
 const isTokenExpired = (): boolean => {
   const expiry = getTokenExpiry();
   if (!expiry) return true;
   
-  // Token dianggap expired jika tersisa kurang dari 5 menit (300000 ms)
   const timeLeft = expiry - Date.now();
-  return timeLeft < 300000; // 5 menit buffer
+  return timeLeft < 300000;
+};
+
+// Helper to check if user is admin from token
+export const checkIsAdmin = (): boolean => {
+  if (typeof window !== 'undefined') {
+    const userInfo = localStorage.getItem('user_info');
+    if (userInfo) {
+      const user = JSON.parse(userInfo);
+      return user.scope === 'admin';
+    }
+  }
+  return false;
+};
+
+// Helper to get user info from localStorage
+export const getUserInfo = (): DecodedToken | null => {
+  if (typeof window !== 'undefined') {
+    const userInfo = localStorage.getItem('user_info');
+    if (userInfo) {
+      return JSON.parse(userInfo);
+    }
+  }
+  return null;
 };
 
 // Auth API
 export const authAPI = {
-  // Step 1: Get authorization code
   async authorize(email: string, password: string): Promise<AuthCode> {
     console.log('Authorizing...', { email });
     const response = await fetch(`${API_URL}/login/authorize`, {
@@ -189,9 +282,8 @@ export const authAPI = {
     return response.json();
   },
 
-  // Step 2: Exchange code for tokens
   async getToken(code: string): Promise<AuthTokens> {
-    console.log('Getting token with code:', code);
+    // console.log('Getting token with code:', code);
     const formData = new URLSearchParams();
     formData.append('grant_type', 'authorization_code');
     formData.append('code', code);
@@ -215,7 +307,6 @@ export const authAPI = {
     return response.json();
   },
 
-  //  NEW: Refresh access token using refresh token
   async refreshAccessToken(): Promise<AuthTokens> {
     console.log('Refreshing access token...');
     const refreshToken = getRefreshToken();
@@ -241,25 +332,22 @@ export const authAPI = {
     if (!response.ok) {
       const error = await response.json();
       console.error('Refresh token failed:', error);
-      // Jika refresh token expired, clear semua token
       clearTokens();
       throw new Error('Refresh token expired. Please login again.');
     }
 
     const tokens = await response.json();
     
-    // Update access token tapi keep refresh token yang lama
     if (typeof window !== 'undefined') {
       localStorage.setItem('access_token', tokens.access_token);
       const expiryTime = Date.now() + (tokens.expires_in * 1000);
       localStorage.setItem('token_expiry', expiryTime.toString());
     }
 
-    console.log(' Token refreshed successfully');
+    console.log('Token refreshed successfully');
     return tokens;
   },
 
-  // Combined login function
   async login(email: string, password: string): Promise<AuthTokens> {
     const authCode = await this.authorize(email, password);
     const tokens = await this.getToken(authCode.authorization_code);
@@ -267,13 +355,12 @@ export const authAPI = {
     return tokens;
   },
 
-  // Logout
   logout() {
     clearTokens();
   },
 };
 
-//  Helper function to make authenticated requests with auto-refresh
+// Helper function for authenticated requests
 async function authenticatedFetch(url: string, options: RequestInit = {}): Promise<Response> {
   let token = getAccessToken();
 
@@ -281,12 +368,11 @@ async function authenticatedFetch(url: string, options: RequestInit = {}): Promi
     throw new Error('No access token found. Please login again.');
   }
 
-  //  Check if token is expired or about to expire
   if (isTokenExpired()) {
     console.log('Token expired or about to expire, refreshing...');
     try {
       await authAPI.refreshAccessToken();
-      token = getAccessToken(); // Get new token
+      token = getAccessToken();
     } catch (error) {
       console.error('Failed to refresh token:', error);
       clearTokens();
@@ -295,19 +381,21 @@ async function authenticatedFetch(url: string, options: RequestInit = {}): Promi
     }
   }
 
-  // Make request with token
-  const headers = {
+  const headers: HeadersInit = {
     ...options.headers,
     'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json',
   };
+
+  // Only add Content-Type if body is not FormData
+  if (!(options.body instanceof FormData)) {
+    (headers as Record<string, string>)['Content-Type'] = 'application/json';
+  }
 
   const response = await fetch(url, {
     ...options,
     headers,
   });
 
-  //  If still unauthorized after refresh, logout
   if (response.status === 401) {
     console.error('Unauthorized even after refresh');
     clearTokens();
@@ -320,13 +408,12 @@ async function authenticatedFetch(url: string, options: RequestInit = {}): Promi
 
 // UMKM API
 export const umkmAPI = {
-  // Get all UMKMs with optional search (TANPA subscription)
   async getAll(search?: string): Promise<UMKMResponse> {
     const url = search 
       ? `${API_URL}/umkms?search=${encodeURIComponent(search)}` 
       : `${API_URL}/umkms`;
     
-    console.log(' Fetching UMKM data from:', url);
+    console.log('Fetching UMKM data from:', url);
 
     const response = await authenticatedFetch(url);
 
@@ -342,18 +429,17 @@ export const umkmAPI = {
     }
 
     const data = await response.json();
-    console.log(' Successfully fetched UMKM data:', data);
+    console.log('Successfully fetched UMKM data:', data);
     return data;
   },
 
-  // NEW: Get all UMKMs DENGAN subscription (paket & harga) DAN user data
   async getAllWithSubscription(search?: string): Promise<UMKMResponse> {
     const params = new URLSearchParams();
     if (search) params.append('search', search);
     params.append('includeSubscription', 'true');
 
     const url = `${API_URL}/umkms?${params.toString()}`;
-    console.log(' Fetching UMKM data WITH subscription from:', url);
+    console.log('Fetching UMKM data WITH subscription from:', url);
 
     const response = await authenticatedFetch(url);
 
@@ -369,11 +455,10 @@ export const umkmAPI = {
     }
 
     const data = await response.json();
-    console.log(' Successfully fetched UMKM data with subscription:', data);
+    console.log('Successfully fetched UMKM data with subscription:', data);
     return data;
   },
 
-  // Get UMKM statistics only
   async getStats(): Promise<{ success: boolean; data: UMKMStats }> {
     const response = await authenticatedFetch(`${API_URL}/umkms/stats`);
 
@@ -384,12 +469,10 @@ export const umkmAPI = {
     return response.json();
   },
 
-  // NEW: Get Dashboard Statistics
   async getDashboardStats(): Promise<DashboardStats> {
     try {
       console.log('Fetching dashboard statistics...');
       
-      // Ambil data UMKM dengan subscription
       const response = await this.getAllWithSubscription();
       
       if (!response.success || !response.data) {
@@ -398,15 +481,12 @@ export const umkmAPI = {
 
       const umkmData = response.data;
       
-      // 1. Hitung UMKM Aktif (status === 'active')
       const activeUmkm = umkmData.filter(umkm => umkm.status === 'active').length;
       
-      // 2. Hitung total transaksi bulan ini
       const now = new Date();
-      const currentMonth = now.getMonth(); // 0-11
+      const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
       
-      // Untuk bulan sebelumnya
       const previousMonth = currentMonth === 0 ? 11 : currentMonth - 1;
       const previousYear = currentMonth === 0 ? currentYear - 1 : currentYear;
       
@@ -417,24 +497,20 @@ export const umkmAPI = {
         if (umkm.subscription?.transaction) {
           const transaction = umkm.subscription.transaction;
           
-          // Gunakan subscription_start sebagai tanggal transaksi
           const transactionDate = new Date(umkm.subscription.subscription_start);
           const transMonth = transactionDate.getMonth();
           const transYear = transactionDate.getFullYear();
           
-          // Hitung transaksi bulan ini
           if (transMonth === currentMonth && transYear === currentYear) {
             monthlyTransactions += transaction.total_price;
           }
           
-          // Hitung transaksi bulan lalu (untuk persentase)
           if (transMonth === previousMonth && transYear === previousYear) {
             previousMonthTransactions += transaction.total_price;
           }
         }
       });
       
-      // 3. Hitung pengguna baru (UMKM yang dibuat 1 bulan terakhir)
       const oneMonthAgo = new Date();
       oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1);
       
@@ -447,18 +523,15 @@ export const umkmAPI = {
       umkmData.forEach(umkm => {
         const createdDate = new Date(umkm.created_at || '');
         
-        // UMKM yang dibuat dalam 1 bulan terakhir
         if (createdDate >= oneMonthAgo && createdDate <= now) {
           newUsers++;
         }
         
-        // UMKM yang dibuat 1-2 bulan yang lalu (untuk persentase)
         if (createdDate >= twoMonthsAgo && createdDate < oneMonthAgo) {
           previousNewUsers++;
         }
       });
       
-      // 4. Hitung persentase perubahan
       const totalUmkm = response.stats?.total || umkmData.length;
       const activeUmkmPercentage = totalUmkm > 0
         ? Math.round(((activeUmkm / totalUmkm) * 100) - 100)
@@ -490,9 +563,8 @@ export const umkmAPI = {
     }
   },
 
-  // Get UMKM by ID (TANPA subscription)
   async getById(id: number): Promise<{ success: boolean; data: UMKM }> {
-    console.log(` Fetching UMKM ID: ${id}`);
+    console.log(`Fetching UMKM ID: ${id}`);
     const response = await authenticatedFetch(`${API_URL}/umkms/${id}`);
 
     if (!response.ok) {
@@ -502,9 +574,8 @@ export const umkmAPI = {
     return response.json();
   },
 
-  // NEW: Get UMKM by ID DENGAN subscription DAN user data
   async getByIdWithSubscription(id: number): Promise<{ success: boolean; data: UMKM }> {
-    console.log(` Fetching UMKM ID ${id} WITH subscription and user`);
+    console.log(`Fetching UMKM ID ${id} WITH subscription and user`);
     const response = await authenticatedFetch(`${API_URL}/umkms/${id}?includeSubscription=true`);
 
     if (!response.ok) {
@@ -514,7 +585,6 @@ export const umkmAPI = {
     return response.json();
   },
 
-  // Create UMKM
   async create(data: any): Promise<{ success: boolean; message: string; data: { id: string } }> {
     const response = await authenticatedFetch(`${API_URL}/umkms`, {
       method: 'POST',
@@ -529,9 +599,8 @@ export const umkmAPI = {
     return response.json();
   },
 
-  // Update UMKM
   async update(id: number, data: any): Promise<{ success: boolean; message: string }> {
-    console.log(` Updating UMKM ID: ${id}`, data);
+    console.log(`Updating UMKM ID: ${id}`, data);
     const response = await authenticatedFetch(`${API_URL}/umkms/${id}`, {
       method: 'PUT',
       body: JSON.stringify(data),
@@ -545,7 +614,6 @@ export const umkmAPI = {
     return response.json();
   },
 
-  // Delete UMKM
   async delete(id: number): Promise<{ success: boolean; message: string }> {
     const response = await authenticatedFetch(`${API_URL}/umkms/${id}`, {
       method: 'DELETE',
@@ -559,7 +627,6 @@ export const umkmAPI = {
     return response.json();
   },
 
-  // ✅ Export CSV - Single ID or Search
   async exportCSV(id?: number, search?: string): Promise<Blob> {
     let url = `${API_URL}/umkms/export`;
     const params = new URLSearchParams();
@@ -567,11 +634,10 @@ export const umkmAPI = {
     if (search) params.append('search', search);
     if (params.toString()) url += `?${params.toString()}`;
 
-    console.log('📤 Exporting CSV from:', url);
+    console.log('Exporting CSV from:', url);
 
     const response = await authenticatedFetch(url);
 
-    // ✅ Cek jika response adalah error JSON (bukan CSV)
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
@@ -584,7 +650,6 @@ export const umkmAPI = {
     return response.blob();
   },
 
-  // ✅ Export CSV - Selected IDs
   async exportSelected(ids: number[]): Promise<Blob> {
     if (ids.length === 0) {
       throw new Error('Tidak ada data yang dipilih untuk di-export');
@@ -593,11 +658,10 @@ export const umkmAPI = {
     const idsString = ids.join(',');
     const url = `${API_URL}/umkms/export?ids=${idsString}`;
 
-    console.log('📤 Exporting selected IDs:', ids);
+    console.log('Exporting selected IDs:', ids);
 
     const response = await authenticatedFetch(url);
 
-    // ✅ Cek jika response adalah error JSON (bukan CSV)
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
@@ -610,13 +674,11 @@ export const umkmAPI = {
     return response.blob();
   },
 
-  // ✅ Export All Records
   async exportAll(): Promise<Blob> {
-    console.log('📤 Exporting all records...');
+    console.log('Exporting all records...');
 
     const response = await authenticatedFetch(`${API_URL}/umkms/export`);
 
-    // ✅ Cek jika response adalah error JSON (bukan CSV)
     if (!response.ok) {
       const contentType = response.headers.get('content-type');
       if (contentType && contentType.includes('application/json')) {
@@ -627,5 +689,240 @@ export const umkmAPI = {
     }
 
     return response.blob();
+  },
+};
+
+// Product API - SAMA SEPERTI UMKM API
+export const productAPI = {
+  // Get user dashboard stats
+  async getDashboardStats(): Promise<UserDashboardResponse> {
+    console.log('Fetching user dashboard stats...');
+    const response = await authenticatedFetch(`${API_URL}/user/dashboard`);
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch dashboard stats');
+    }
+
+    return response.json();
+  },
+
+  // ✅ SAMA SEPERTI UMKM: Get all products with search AND status
+async getAll(search?: string, status?: string): Promise<ProductsResponse & { stats?: { total: number; active: number; nonActive: number } }> {
+  let url = `${API_URL}/user/products`;
+  
+  const params = new URLSearchParams();
+  if (search && search.trim()) {
+    params.append('search', search.trim());
+  }
+  if (status) {
+    params.append('status', status);
+  }
+  
+  if (params.toString()) {
+    url += `?${params.toString()}`;
+  }
+
+  console.log('Fetching user products from:', url);
+  const response = await authenticatedFetch(url);
+
+  if (!response.ok) {
+    let errorMessage = 'Failed to fetch products';
+    try {
+      const errorData = await response.json();
+      errorMessage = errorData.message || errorMessage;
+    } catch (e) {
+      // Ignore
+    }
+    throw new Error(errorMessage);
+  }
+
+  const data = await response.json();
+  console.log('Successfully fetched products:', data);
+  return data;
+},
+
+  // ✅ SAMA SEPERTI UMKM: Get all products for admin with search only
+  async getAllAdmin(search?: string): Promise<ProductsResponse & { stats?: { total: number; active: number; nonActive: number } }> {
+    let url = `${API_URL}/user/products/all`;
+    
+    // Only add search parameter - SAMA SEPERTI UMKM
+    if (search && search.trim()) {
+      url += `?search=${encodeURIComponent(search.trim())}`;
+    }
+
+    console.log('Fetching all products (admin) from:', url);
+    const response = await authenticatedFetch(url);
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to fetch all products';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  // Get product by ID
+  async getById(id: string | number): Promise<ProductResponse> {
+    console.log(`Fetching product ID: ${id}`);
+    const response = await authenticatedFetch(`${API_URL}/user/products/${id}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch product with ID ${id}`);
+    }
+
+    return response.json();
+  },
+
+  // Create product
+  async create(formDataOrObject: FormData | {
+    name: string;
+    description?: string;
+    price: number;
+    status: string;
+    linkTokopedia?: string;
+    linkShopee?: string;
+    linkLazada?: string;
+    linkBukalapak?: string;
+    linkLainnya?: string;
+    image?: File;
+  }): Promise<{ success: boolean; message: string; data: { id: string } }> {
+    console.log('Creating product...', formDataOrObject);
+    
+    let formData: FormData;
+    
+    if (formDataOrObject instanceof FormData) {
+      formData = formDataOrObject;
+    } else {
+      formData = new FormData();
+      formData.append('name', formDataOrObject.name);
+      if (formDataOrObject.description) formData.append('description', formDataOrObject.description);
+      formData.append('price', formDataOrObject.price.toString());
+      formData.append('status', formDataOrObject.status);
+      
+      if (formDataOrObject.linkTokopedia) formData.append('linkTokopedia', formDataOrObject.linkTokopedia);
+      if (formDataOrObject.linkShopee) formData.append('linkShopee', formDataOrObject.linkShopee);
+      if (formDataOrObject.linkLazada) formData.append('linkLazada', formDataOrObject.linkLazada);
+      if (formDataOrObject.linkBukalapak) formData.append('linkBukalapak', formDataOrObject.linkBukalapak);
+      if (formDataOrObject.linkLainnya) formData.append('linkLainnya', formDataOrObject.linkLainnya);
+      
+      if (formDataOrObject.image) formData.append('image', formDataOrObject.image);
+    }
+
+    const response = await authenticatedFetch(`${API_URL}/user/products`, {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to create product');
+    }
+
+    return response.json();
+  },
+
+  // Update product
+  async update(id: string | number, formDataOrObject: FormData | {
+    name?: string;
+    description?: string;
+    price?: number;
+    status?: string;
+    linkTokopedia?: string;
+    linkShopee?: string;
+    linkLazada?: string;
+    linkBukalapak?: string;
+    linkLainnya?: string;
+    image?: File;
+  }): Promise<{ success: boolean; message: string }> {
+    console.log(`Updating product ID: ${id}`, formDataOrObject);
+    
+    let formData: FormData;
+    
+    if (formDataOrObject instanceof FormData) {
+      formData = formDataOrObject;
+    } else {
+      formData = new FormData();
+      if (formDataOrObject.name) formData.append('name', formDataOrObject.name);
+      if (formDataOrObject.description !== undefined) formData.append('description', formDataOrObject.description);
+      if (formDataOrObject.price) formData.append('price', formDataOrObject.price.toString());
+      if (formDataOrObject.status) formData.append('status', formDataOrObject.status);
+      
+      if (formDataOrObject.linkTokopedia !== undefined) formData.append('linkTokopedia', formDataOrObject.linkTokopedia);
+      if (formDataOrObject.linkShopee !== undefined) formData.append('linkShopee', formDataOrObject.linkShopee);
+      if (formDataOrObject.linkLazada !== undefined) formData.append('linkLazada', formDataOrObject.linkLazada);
+      if (formDataOrObject.linkBukalapak !== undefined) formData.append('linkBukalapak', formDataOrObject.linkBukalapak);
+      if (formDataOrObject.linkLainnya !== undefined) formData.append('linkLainnya', formDataOrObject.linkLainnya);
+      
+      if (formDataOrObject.image) formData.append('image', formDataOrObject.image);
+    }
+
+    const response = await authenticatedFetch(`${API_URL}/user/products/${id}`, {
+      method: 'PUT',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to update product');
+    }
+
+    return response.json();
+  },
+
+  // Delete product
+  async delete(id: string | number): Promise<{ success: boolean; message: string }> {
+    console.log(`Deleting product ID: ${id}`);
+    const response = await authenticatedFetch(`${API_URL}/user/products/${id}`, {
+      method: 'DELETE',
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || 'Failed to delete product');
+    }
+
+    return response.json();
+  },
+
+  
+};
+
+// Template API - Tambahkan setelah productAPI
+export const templateAPI = {
+  async getAll(): Promise<TemplatesResponse> {
+    console.log('Fetching templates...');
+    const response = await authenticatedFetch(`${API_URL}/templates`);
+
+    if (!response.ok) {
+      let errorMessage = 'Failed to fetch templates';
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    const data = await response.json();
+    console.log('Successfully fetched templates:', data);
+    return data;
+  },
+
+  async getById(id: number): Promise<{ success: boolean; data: Template }> {
+    console.log(`Fetching template ID: ${id}`);
+    const response = await authenticatedFetch(`${API_URL}/templates/${id}`);
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch template with ID ${id}`);
+    }
+
+    return response.json();
   },
 };
