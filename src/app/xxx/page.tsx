@@ -7,12 +7,14 @@ import HeadSummary from "@/app/ui/headers/header-summary";
 import StatsSection from "@/app/ui/section/seaction-stat";
 import DemoTableRecentUMKm from "./table-recent-umk";
 import Chart from "../ui/charts/line-chart";
-import { umkmAPI, DashboardStats } from '@/lib/api';
+import { umkmAPI, DashboardStats, getUserInfo } from '@/lib/api';
 
 const MainDsAdmin: React.FC = () => {
   const router = useRouter();
   const [searchInput, setSearchInput] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     activeUmkm: 0,
     monthlyTransactions: 0,
@@ -24,8 +26,46 @@ const MainDsAdmin: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch dashboard stats dari API
+  // ✅ CRITICAL: Check admin access first
   useEffect(() => {
+    const checkAdminAccess = () => {
+      console.log('🔒 Checking admin access...');
+      
+      const userInfo = getUserInfo();
+      
+      if (!userInfo) {
+        console.error('❌ No user info found');
+        setIsAuthorized(false);
+        setIsCheckingAuth(false);
+        router.replace('/');
+        return;
+      }
+
+      const userScope = userInfo.scope || 'user';
+      console.log('👤 User scope:', userScope);
+
+      if (userScope !== 'admin') {
+        console.error('❌ Access denied: User is not admin');
+        setIsAuthorized(false);
+        setIsCheckingAuth(false);
+        router.replace('/dashboard?error=unauthorized');
+        return;
+      }
+
+      console.log('✅ Admin access granted');
+      setIsAuthorized(true);
+      setIsCheckingAuth(false);
+    };
+
+    checkAdminAccess();
+  }, [router]);
+
+  // Fetch dashboard stats ONLY if authorized
+  useEffect(() => {
+    if (!isAuthorized || isCheckingAuth) {
+      return; // Don't fetch if not authorized yet
+    }
+
     const fetchDashboardStats = async () => {
       try {
         setLoading(true);
@@ -40,10 +80,9 @@ const MainDsAdmin: React.FC = () => {
         console.error('❌ Error fetching dashboard stats:', error);
         setError(error.message || 'Failed to load dashboard stats');
         
-        // Jika error unauthorized, redirect ke login
-        if (error.message?.includes('Session expired') || error.message?.includes('UNAUTHORIZED')) {
-          console.log('🔒 Session expired, redirecting to login...');
-          router.push('/');
+        if (error.message?.includes('Insufficient permissions')) {
+          console.log('🔒 Unauthorized, redirecting...');
+          router.replace('/dashboard?error=unauthorized');
         }
       } finally {
         setLoading(false);
@@ -51,7 +90,7 @@ const MainDsAdmin: React.FC = () => {
     };
 
     fetchDashboardStats();
-  }, [router]);
+  }, [isAuthorized, isCheckingAuth, router]);
 
   const statsData = [
     {
@@ -78,7 +117,6 @@ const MainDsAdmin: React.FC = () => {
     setSearchInput(value);
   };
 
-  // Debounce search - tunggu 500ms setelah user berhenti mengetik
   useEffect(() => {
     const timer = setTimeout(() => {
       console.log("Search query set to:", searchInput);
@@ -106,7 +144,44 @@ const MainDsAdmin: React.FC = () => {
   const colors = ['#4D97FF', '#28A745'];
   const chartType: 'line' | 'column' = 'line';
 
-  // Jika ada error, tampilkan error message
+  // ✅ Show loading while checking authorization
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Memverifikasi akses admin...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Show access denied if not authorized
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center max-w-md mx-auto p-6">
+          <div className="text-red-600 text-6xl mb-4">🚫</div>
+          <h1 className="text-2xl font-bold text-gray-800 mb-2">Akses Ditolak</h1>
+          <p className="text-gray-600 mb-6">
+            Halaman ini hanya dapat diakses oleh administrator.
+            <br />
+            <span className="text-sm text-red-600 font-semibold">
+              Insufficient permissions: 'admin' scope required
+            </span>
+          </p>
+          <button 
+            onClick={() => router.replace('/dashboard')}
+            className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+          >
+            Kembali ke Dashboard
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Only render admin content if authorized
   if (error && !loading) {
     return (
       <DashboardAdminLayout path="xxx">
@@ -142,7 +217,6 @@ const MainDsAdmin: React.FC = () => {
       
       {loading ? (
         <div className="mt-5 space-y-4">
-          {/* Loading skeleton untuk stats */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {[1, 2, 3].map((i) => (
               <div key={i} className="bg-white p-6 rounded-lg shadow animate-pulse">

@@ -3,6 +3,24 @@ import { useRouter } from "next/navigation";
 import React, { useState } from 'react';
 import { authAPI } from '@/lib/api';
 
+// Helper function to decode JWT
+function parseJwt(token: string): any {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (error) {
+    console.error('Error parsing JWT:', error);
+    return null;
+  }
+}
+
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -14,21 +32,58 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
+  
     try {
       console.log('🔐 Starting login process...');
+      console.log('Email:', email);
+  
+      // ✅ CRITICAL: Clear all previous session data FIRST
+      console.log('🧹 Clearing previous session...');
+      localStorage.clear();
       
-      // Login akan set HttpOnly cookies otomatis di backend
-      // TIDAK perlu simpan token di localStorage lagi
-      await authAPI.login(email, password);
+      // Small delay to ensure cleanup
+      await new Promise(resolve => setTimeout(resolve, 100));
+  
+      // ✅ Login and get tokens
+      const tokens = await authAPI.login(email, password);
+      console.log('✅ Login successful, tokens received');
+  
+      // ✅ Decode token IMMEDIATELY after login
+      const decoded = parseJwt(tokens.access_token);
       
-      console.log('✅ Login successful, cookies set by backend');
-      
-      // Redirect ke dashboard setelah login berhasil
-      router.push('/xxx'); // Ganti dengan route dashboard Anda
+      if (!decoded) {
+        throw new Error('Failed to decode token');
+      }
+  
+      console.log('👤 User info:', {
+        user_id: decoded.user_id,
+        email: decoded.email,
+        scope: decoded.scope
+      });
+  
+      // ✅ Store user info explicitly
+      localStorage.setItem('user_info', JSON.stringify({
+        user_id: decoded.user_id,
+        email: decoded.email,
+        name: decoded.name,
+        scope: decoded.scope || 'user'
+      }));
+  
+      const scope = decoded.scope || 'user';
+  
+      // ✅ Redirect based on scope
+      if (scope === 'admin') {
+        console.log('🔑 Admin detected, redirecting to /xxx');
+        router.replace('/xxx');
+      } else {
+        console.log('👤 User detected, redirecting to /user');
+        router.replace('/user');
+      }
+  
     } catch (err: any) {
       console.error('❌ Login error:', err);
       setError(err.message || 'Login gagal. Silakan coba lagi.');
+      localStorage.clear(); // Clear on error
     } finally {
       setLoading(false);
     }
@@ -114,12 +169,6 @@ const LoginPage: React.FC = () => {
             </p>
           </div>
 
-          {/* Info HttpOnly Cookies */}
-          <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-xs text-gray-600 text-center">
-              🔒 Token disimpan di <strong>HttpOnly Cookies</strong> untuk keamanan maksimal
-            </p>
-          </div>
         </div>
       </div>
     </div>

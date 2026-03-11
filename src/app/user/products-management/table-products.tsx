@@ -1,10 +1,12 @@
 "use client";
 
-import React, { useMemo, useState, useEffect } from "react";
-import Image from "next/image";
 import DataTable, { Column, classNames } from "@/app/ui/datatables/datatable";
+import { useMemo, useState } from "react";
+// import Image from "next/image";
 import { useUserProductsStore } from "@/stores/use-user-products-store";
 import { useRouter } from "next/navigation";
+import SafeImage from "@/components/SafeImage";
+
 
 type Product = {
   id: number;
@@ -16,31 +18,62 @@ type Product = {
   status: "aktif" | "non-aktif";
 };
 
-function shortText(text: string, max = 20) {
+function shortText(text: string, max = 30) {
   return text.length <= max ? text : text.slice(0, max) + "...";
 }
 
 export default function DemoTableProducts() {
-  const { products, fetchProductsData } = useUserProductsStore();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"Semua" | "aktif" | "non-aktif">("Semua");
-  const [appliedSearch, setAppliedSearch] = useState("");
-  const [appliedStatus, setAppliedStatus] = useState<"Semua" | "aktif" | "non-aktif">("Semua");
   const router = useRouter();
+  const { products, fetchProductsData, deleteProduct, loading, error } =
+    useUserProductsStore();
 
-  // Fetch simulated data (from Zustand store)
-  useEffect(() => {
-    fetchProductsData();
-  }, [fetchProductsData]);
+  // Filter state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"" | "published" | "draft">("");
 
-  // Filtered data
-  const filteredData = products.filter((p) => {
-    const matchName = p.name.toLowerCase().includes(appliedSearch.toLowerCase());
-    const matchStatus = appliedStatus === "Semua" ? true : p.status === appliedStatus;
-    return matchName && matchStatus;
-  });
+  // Apply filters
+  const applyFilters = async () => {
+    console.log("=== APPLY FILTERS (FRONTEND) ===");
+    console.log("Search term:", searchTerm);
+    console.log("Status filter:", statusFilter);
 
-  // Columns
+    // Prepare parameters
+    const searchParam = searchTerm.trim() || undefined;
+    const statusParam = statusFilter || undefined;
+
+    console.log("Calling fetchProductsData with:", { search: searchParam, status: statusParam });
+
+    // Call fetch
+    await fetchProductsData({
+      search: searchParam,
+      status: statusParam
+    });
+  };
+
+  // Reset filters
+  const resetFilters = async () => {
+    console.log("=== RESET FILTERS ===");
+    setSearchTerm("");
+    setStatusFilter("");
+    await fetchProductsData();
+  };
+
+  // Use products directly from store
+  const filteredProducts = products;
+
+  // Delete handler
+  const handleDelete = async (row: Product) => {
+    if (confirm(`Apakah Anda yakin ingin menghapus produk "${row.name}"?`)) {
+      try {
+        await deleteProduct(row.id);
+        alert("Produk berhasil dihapus");
+      } catch (err) {
+        console.error(err);
+        alert("Gagal menghapus produk");
+      }
+    }
+  };
+
   const columns = useMemo<Column<Product>[]>(
     () => [
       {
@@ -53,17 +86,22 @@ export default function DemoTableProducts() {
         key: "image",
         header: "Foto Produk",
         width: "100px",
-        render: (v) => (
-          <div className="flex justify-center">
-            <Image
-              src={v || "/images/no-image.png"}
-              alt="Foto Produk"
-              width={60}
-              height={60}
-              className="rounded-lg object-cover border border-gray-200"
-            />
-          </div>
-        ),
+        render: (v) => {
+          const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
+          const imageUrl = v ? `${API_URL}${v}` : '/images/no-image.png';
+
+          return (
+            <div className="flex justify-center">
+              <SafeImage
+                src={imageUrl}
+                alt="Foto Produk"
+                width={60}
+                height={60}
+                className="rounded-lg object-cover border border-gray-200"
+              />
+            </div>
+          );
+        },
       },
       { key: "name", header: "Nama Produk" },
       {
@@ -80,7 +118,7 @@ export default function DemoTableProducts() {
       {
         key: "description",
         header: "Deskripsi",
-        render: (v) => shortText(v, 30),
+        render: (v) => shortText(v || "", 30),
       },
       {
         key: "status",
@@ -108,40 +146,43 @@ export default function DemoTableProducts() {
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <input
           type="text"
-          placeholder="Cari nama produk..."
+          placeholder="Cari nama produk atau ID..."
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              applyFilters();
+            }
+          }}
           className="border border-gray-300 rounded-md px-3 py-2 w-64 text-sm focus:ring focus:ring-green-200 outline-none"
         />
 
         <select
           value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value as "Semua" | "aktif" | "non-aktif")}
+          onChange={(e) => {
+            const newValue = e.target.value as "" | "published" | "draft";
+            console.log("Status filter changed to:", newValue);
+            setStatusFilter(newValue);
+          }}
           className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring focus:ring-green-200 outline-none"
         >
-          <option value="Semua">Pilih Status (Semua)</option>
-          <option value="aktif">Aktif</option>
-          <option value="non-aktif">Nonaktif</option>
+          <option value="">Semua Status</option>
+          <option value="published">Aktif</option>
+          <option value="draft">Nonaktif</option>
         </select>
 
         <button
-          onClick={() => {
-            setAppliedSearch(searchTerm);
-            setAppliedStatus(statusFilter);
-          }}
-          className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition"
+          onClick={applyFilters}
+          disabled={loading}
+          className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed"
         >
-          Terapkan
+          {loading ? "Memuat..." : "Terapkan"}
         </button>
 
         <button
-          onClick={() => {
-            setSearchTerm("");
-            setStatusFilter("Semua");
-            setAppliedSearch("");
-            setAppliedStatus("Semua");
-          }}
-          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition"
+          onClick={resetFilters}
+          disabled={loading}
+          className="px-4 py-2 bg-gray-200 text-gray-700 text-sm rounded-md hover:bg-gray-300 transition disabled:bg-gray-100 disabled:cursor-not-allowed"
         >
           Reset
         </button>
@@ -149,7 +190,7 @@ export default function DemoTableProducts() {
 
       {/* Table */}
       <DataTable<Product>
-        rows={filteredData}
+        rows={filteredProducts}
         columns={columns}
         showToolbar={false}
         initialSort={{ key: "id", dir: "asc" }}
@@ -157,16 +198,17 @@ export default function DemoTableProducts() {
         rowActions={[
           {
             label: "Ubah",
-            onClick: (row) => router.push(`/user/products-management/edit/${row.id}`),
+            onClick: (row) =>
+              router.push(`/user/products-management/edit/${row.id}`),
           },
           {
-            label: "Lihat",
-            onClick: (row) => alert(`Lihat produk ID ${row.id}`),
+            label: "Hapus",
+            onClick: handleDelete,
           },
         ]}
         getRowId={(row) => row.id}
-        isLoading={false}
-        error={null}
+        isLoading={loading}
+        error={error}
       />
     </div>
   );

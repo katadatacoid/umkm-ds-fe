@@ -1,7 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
+import { getUserFromToken } from "@/lib/utils";
 
 interface LinkItem {
   href: string;
@@ -18,6 +19,16 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLinkClass }) => {
+  const [userName, setUserName] = useState<string>("User");
+
+  // Ambil nama user dari token saat component mount
+  useEffect(() => {
+    const user = getUserFromToken();
+    if (user && user.name) {
+      setUserName(user.name);
+    }
+  }, []);
+
   // Tutup otomatis ketika klik link di mobile (lg:hidden)
   const handleLinkClick = useCallback(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
@@ -98,7 +109,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
           />
           <div className="flex flex-col ml-2">
             <span className="text-xs text-gray-500">Welcome Back</span>
-            <span className="text-sm font-medium text-gray-700">Oguri Cap</span>
+            <span className="text-sm font-medium text-gray-700">{userName}</span>
           </div>
         </div>
       </aside>

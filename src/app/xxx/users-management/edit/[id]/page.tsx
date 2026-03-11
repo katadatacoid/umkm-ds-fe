@@ -2,7 +2,7 @@
 import DashboardAdminLayout from '@/app/ui/layout/ds-admin-layout';
 import { useRouter, useParams } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
-import { umkmAPI, authAPI } from '@/lib/api';
+import { umkmAPI, authAPI, templateAPI, Template } from '@/lib/api'; // Tambahkan templateAPI dan Template
 
 export default function EditUMKMForm() {
   const router = useRouter();
@@ -10,9 +10,12 @@ export default function EditUMKMForm() {
   const id = params.id as string;
 
   const [loading, setLoading] = useState(true);
+  const [templates, setTemplates] = useState<Template[]>([]); // State untuk templates
+  const [loadingTemplates, setLoadingTemplates] = useState(false); // State untuk loading templates
+  
   const [formData, setFormData] = useState({
-    fullName: '', // Nama lengkap dari tabel users
-    businessName: '', // Nama usaha dari tabel user_products
+    fullName: '',
+    businessName: '',
     email: '',
     phoneNumber: '',
     websiteName: '',
@@ -23,13 +26,34 @@ export default function EditUMKMForm() {
     status: '',
   });
 
+  // Fetch templates dari database
+  useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        setLoadingTemplates(true);
+        const response = await templateAPI.getAll();
+        
+        if (response.success && response.data) {
+          setTemplates(response.data);
+          console.log('Templates loaded:', response.data);
+        }
+      } catch (error: any) {
+        console.error('Error fetching templates:', error);
+        // Tidak perlu alert di sini, template adalah optional
+      } finally {
+        setLoadingTemplates(false);
+      }
+    };
+
+    fetchTemplates();
+  }, []);
+
   // Fetch data UMKM berdasarkan ID dengan subscription dan user data
   useEffect(() => {
     const fetchUMKMData = async () => {
       try {
         setLoading(true);
         
-        // Gunakan getByIdWithSubscription untuk mendapatkan data subscription dan user
         const response = await umkmAPI.getByIdWithSubscription(parseInt(id));
         
         console.log('Data dari API getByIdWithSubscription:', response);
@@ -37,19 +61,16 @@ export default function EditUMKMForm() {
         if (response.success && response.data) {
           const umkmData = response.data;
           
-          // Parse domain untuk mendapatkan nama website
           let websiteName = '';
           if (umkmData.domain_name) {
             websiteName = umkmData.domain_name.split('.')[0] || '';
           }
 
-          // Ambil nama lengkap dari data user
-          let fullName = umkmData.name || ''; // Default dari nama usaha
+          let fullName = umkmData.name || '';
           if (umkmData.user && umkmData.user.name) {
-            fullName = umkmData.user.name; // Nama dari tabel users
+            fullName = umkmData.user.name;
           }
 
-          // Ambil paket langganan dari subscription
           let packageName = '';
           let packagePrice = 0;
           
@@ -59,13 +80,12 @@ export default function EditUMKMForm() {
             packagePrice = umkmData.subscription.transaction.total_price || 0;
           }
 
-          let displayStatus = 'non-aktif'; // Default
+          let displayStatus = 'non-aktif';
         
-          console.log('Status dari database:', umkmData.status); // Debug
+          console.log('Status dari database:', umkmData.status);
           
           if (umkmData.status) {
             const statusLower = umkmData.status.toLowerCase();
-            // Map semua varian "aktif" ke 'aktif'
             if (['active', 'published', 'aktif'].includes(statusLower)) {
               displayStatus = 'aktif';
             } else if (['draft', 'inactive', 'non-aktif'].includes(statusLower)) {
@@ -74,8 +94,8 @@ export default function EditUMKMForm() {
           }
           
           setFormData({
-            fullName: fullName, // Nama lengkap dari tabel users
-            businessName: umkmData.name || '', // Nama usaha dari tabel user_products
+            fullName: fullName,
+            businessName: umkmData.name || '',
             email: umkmData.user?.email || umkmData.email || '',
             phoneNumber: umkmData.user?.phone || umkmData.phone || '',
             websiteName: websiteName,
@@ -118,7 +138,6 @@ export default function EditUMKMForm() {
         [name]: parseInt(value) || 0,
       });
     } else if (name === 'websiteName') {
-      // Jika nama website berubah, nama domain ikut berubah
       setFormData({
         ...formData,
         websiteName: value,
@@ -135,7 +154,6 @@ export default function EditUMKMForm() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validasi
     if (!formData.fullName || !formData.businessName || !formData.email || !formData.phoneNumber) {
       alert('Mohon lengkapi Nama Lengkap, Nama Usaha, Email, dan No Handphone');
       return;
@@ -146,23 +164,18 @@ export default function EditUMKMForm() {
       console.log('ID UMKM:', id);
       console.log('Data yang akan diupdate:', formData);
       
-      // Siapkan data untuk backend sesuai struktur database
       const updateData = {
-        // Data untuk tabel user_products
-        name: formData.businessName, // Nama usaha
+        name: formData.businessName,
         email: formData.email,
         phone: formData.phoneNumber,
         domain_name: formData.domainName,
         template_id: formData.template,
         status: formData.status === 'aktif' ? 'active' : 'draft',
-        
-        // Data untuk tabel users (nama lengkap)
-        user_name: formData.fullName, // Backend akan handle update ke tabel users
+        user_name: formData.fullName,
       };
       
       console.log('Data yang dikirim ke API:', updateData);
       
-      // Panggil API dengan format baru (id, data)
       const response = await umkmAPI.update(parseInt(id), updateData);
       
       console.log('Response update:', response);
@@ -204,7 +217,7 @@ export default function EditUMKMForm() {
         </h2>
         <form onSubmit={handleSubmit}>
           <div className="space-y-4">
-            {/* Nama Lengkap - dari tabel users */}
+            {/* Nama Lengkap */}
             <div className="flex flex-col">
               <label htmlFor="fullName" className="text-sm font-medium text-gray-700">
                 Nama Lengkap <span className="text-red-500">*</span>
@@ -224,7 +237,7 @@ export default function EditUMKMForm() {
               </p>
             </div>
 
-            {/* Nama Usaha - dari tabel user_products */}
+            {/* Nama Usaha */}
             <div className="flex flex-col">
               <label htmlFor="businessName" className="text-sm font-medium text-gray-700">
                 Nama Usaha <span className="text-red-500">*</span>
@@ -244,6 +257,7 @@ export default function EditUMKMForm() {
               </p>
             </div>
 
+            {/* Email */}
             <div className="flex flex-col">
               <label htmlFor="email" className="text-sm font-medium text-gray-700">
                 Email <span className="text-red-500">*</span>
@@ -260,6 +274,7 @@ export default function EditUMKMForm() {
               />
             </div>
 
+            {/* No Handphone */}
             <div className="flex flex-col">
               <label htmlFor="phoneNumber" className="text-sm font-medium text-gray-700">
                 No Handphone <span className="text-red-500">*</span>
@@ -276,6 +291,7 @@ export default function EditUMKMForm() {
               />
             </div>
 
+            {/* Nama Website */}
             <div className="flex flex-col">
               <label htmlFor="websiteName" className="text-sm font-medium text-gray-700">
                 Nama Website
@@ -291,6 +307,7 @@ export default function EditUMKMForm() {
               />
             </div>
 
+            {/* Nama Domain */}
             <div className="flex flex-col">
               <label htmlFor="domainName" className="text-sm font-medium text-gray-700">
                 Nama Domain
@@ -310,6 +327,7 @@ export default function EditUMKMForm() {
               </p>
             </div>
 
+            {/* Template - Dynamic dari Database */}
             <div className="flex flex-col">
               <label htmlFor="template" className="text-sm font-medium text-gray-700">
                 Template
@@ -319,19 +337,27 @@ export default function EditUMKMForm() {
                 name="template"
                 value={formData.template}
                 onChange={handleChange}
-                className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+                disabled={loadingTemplates}
+                className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 disabled:bg-gray-100 disabled:cursor-not-allowed"
               >
-                <option value="0" disabled>Pilih Template</option>
-                <option value="1">Savor the Freshness of Autumn</option>
-                <option value="2">Discover Amazing Deals on Fresh Goods</option>
-                <option value="3">What's Fresh for Your Cart?</option>
-                <option value="4">Get Fresh Vegetables at Big Discounts</option>
-                <option value="5">Snack Time, Anytime</option>
-                <option value="6">Fresh, Healthy, and Ready for You</option>
+                <option value="0" disabled>
+                  {loadingTemplates ? 'Loading templates...' : 'Pilih Template'}
+                </option>
+                {templates.map((template) => (
+                  <option key={template.id} value={template.id}>
+                    {template.nama_template}
+                    {template.kategori ? ` - ${template.kategori}` : ''}
+                  </option>
+                ))}
               </select>
+              {templates.length === 0 && !loadingTemplates && (
+                <p className="mt-1 text-xs text-red-500">
+                  Tidak ada template tersedia
+                </p>
+              )}
             </div>
 
-            {/* Paket Langganan - Read Only (dari subscription) */}
+            {/* Paket Langganan */}
             <div className="flex flex-col">
               <label htmlFor="packageSubscription" className="text-sm font-medium text-gray-700">
                 Paket Langganan
@@ -350,7 +376,7 @@ export default function EditUMKMForm() {
               </p>
             </div>
 
-            {/* Harga Paket - Read Only */}
+            {/* Harga Paket */}
             <div className="flex flex-col">
               <label htmlFor="packagePrice" className="text-sm font-medium text-gray-700">
                 Harga Paket
@@ -369,6 +395,7 @@ export default function EditUMKMForm() {
               </p>
             </div>
 
+            {/* Status */}
             <div className="flex flex-col">
               <label htmlFor="status" className="text-sm font-medium text-gray-700">
                 Status

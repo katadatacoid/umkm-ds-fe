@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { productAPI } from "@/lib/api";
 
 // ----------------------
 // Types
@@ -8,15 +9,23 @@ import { create } from "zustand";
 interface StatItem {
   title: string;
   value: number | string;
-  percentage?: number; // Optional, e.g. 32 means +32%
+  percentage?: number;
   description?: string;
+}
+
+// Monthly Stats untuk tracking persentase
+interface MonthlyStats {
+  month: string; // Format: "YYYY-MM"
+  totalProduk: number;
+  totalReferall: number;
+  pageViews: number;
 }
 
 // Page Views Chart
 type PageViewFilter = "week" | "month" | "year";
 
 interface PageViewDataItem {
-  label: string; // e.g. Mon, Tue, Wed...
+  label: string;
   pageViews: number;
 }
 
@@ -29,14 +38,14 @@ interface PageViewsChart {
 type EarningsFilter = "week" | "month" | "year";
 
 interface EarningsDataItem {
-  label: string; // e.g. Week 1, Jan, Feb...
+  label: string;
   amount: number;
 }
 
 interface EarningsChart {
   filter: EarningsFilter;
   data: EarningsDataItem[];
-  percentage?: number; // Optional, e.g. +12%
+  percentage?: number;
 }
 
 // Produk Baru Ditambahkan
@@ -46,6 +55,8 @@ interface ProductItem {
   price: number;
   image: string;
   description: string;
+  status: "aktif" | "non-aktif";
+  date?: string;
 }
 
 // ----------------------
@@ -57,6 +68,12 @@ interface UserDashboardState {
   pageViewsChart: PageViewsChart;
   earningsChart: EarningsChart;
   recentProducts: ProductItem[];
+  loading: boolean;
+  error: string | null;
+
+  // Monthly stats for percentage calculation
+  currentMonthStats: MonthlyStats | null;
+  previousMonthStats: MonthlyStats | null;
 
   search: string;
   setSearch: (value: string) => void;
@@ -69,28 +86,33 @@ interface UserDashboardState {
   setEarningsData: (data: EarningsDataItem[]) => void;
   setRecentProducts: (data: ProductItem[]) => void;
   fetchDashboardData: () => Promise<void>;
+  
+  // Monthly stats helpers
+  saveMonthlyStats: (stats: MonthlyStats) => void;
+  calculatePercentageChange: (current: number, previous: number) => number;
 }
 
 // ----------------------
 // Store Implementation
 // ----------------------
 export const useUserDashboardStore = create<UserDashboardState>((set) => ({
-  // Initial Dummy Data
+  // Initial State
   statsData: [
     {
       title: "Total Produk",
-      value: 156,
+      value: 0,
       description: "Jumlah produk yang sudah tersedia di katalog",
     },
     {
       title: "Total Referall",
-      value: 150,
-      percentage: 32,
+      value: 0,
+      // percentage: 0, // TODO: Tambahkan logika perhitungan persentase pertumbuhan referral jika diperlukan
       description: "Total keseluruhan referral yang berhasil bergabung",
     },
     {
       title: "Page Views",
-      value: 6.43,
+      value: 0,
+      // percentage: 0, // TODO: Tambahkan logika perhitungan persentase pertumbuhan page views jika diperlukan
       description: "Jumlah kunjungan yang tercatat",
     },
   ],
@@ -119,151 +141,45 @@ export const useUserDashboardStore = create<UserDashboardState>((set) => ({
     ],
   },
 
-  recentProducts: [
-    {
-      "id": 1,
-      "name": "Kopi Arabika Aceh Gayo",
-      "price": 65000,
-      "image": "/images/user/product-1.jpg",
-      "description": "Biji kopi arabika premium dari Gayo.",
-    },
-    {
-      "id": 2,
-      "name": "Keripik Pisang Lampung",
-      "price": 25000,
-      "image": "/images/products/snack1.png",
-      "description": "Cemilan khas Lampung dengan rasa manis gurih.",
-    },
-    {
-      "id": 3,
-      "name": "Batik Pekalongan",
-      "price": 120000,
-      "image": "/images/products/batik1.png",
-      "description": "Batik tulis khas Pekalongan dengan motif klasik.",
-    },
-    {
-      "id": 4,
-      "name": "Tahu Tempe Gembus",
-      "price": 15000,
-      "image": "/images/products/snack2.png",
-      "description": "Cemilan tahu tempe khas Indonesia, renyah dan gurih.",
-    },
-    {
-      "id": 5,
-      "name": "Sate Padang",
-      "price": 50000,
-      "image": "/images/products/food1.png",
-      "description": "Sate dengan kuah pedas khas Padang.",
-    },
-    {
-      "id": 6,
-      "name": "Kerupuk Jember",
-      "price": 20000,
-      "image": "/images/products/snack3.png",
-      "description": "Kerupuk dari Jember dengan rasa gurih.",
-    },
-    {
-      "id": 7,
-      "name": "Tempe Mendoan",
-      "price": 18000,
-      "image": "/images/products/snack4.png",
-      "description": "Tempe mendoan dengan tepung crispy.",
-    },
-    {
-      "id": 8,
-      "name": "Kopi Luwak",
-      "price": 350000,
-      "image": "/images/products/coffee1.png",
-      "description": "Kopi premium yang diolah melalui proses unik Luwak.",
-    },
-    {
-      "id": 9,
-      "name": "Keris Madura",
-      "price": 250000,
-      "image": "/images/products/keris1.png",
-      "description": "Keris tradisional Madura dengan ukiran halus.",
-    },
-    {
-      "id": 10,
-      "name": "Kain Songket Palembang",
-      "price": 500000,
-      "image": "/images/products/textile1.png",
-      "description": "Songket tradisional Palembang, kain indah dengan benang emas.",
-    },
-    {
-      "id": 11,
-      "name": "Es Teh Manis",
-      "price": 10000,
-      "image": "/images/products/drink1.png",
-      "description": "Minuman teh manis dingin khas Indonesia.",
-    },
-    {
-      "id": 12,
-      "name": "Lempung Bali",
-      "price": 35000,
-      "image": "/images/products/snack5.png",
-      "description": "Cemilan ringan khas Bali dengan rasa manis gurih.",
-    },
-    {
-      "id": 13,
-      "name": "Rendang Padang",
-      "price": 150000,
-      "image": "/images/products/food2.png",
-      "description": "Rendang daging sapi dengan bumbu khas Padang.",
-    },
-    {
-      "id": 14,
-      "name": "Kipas Batik",
-      "price": 45000,
-      "image": "/images/products/accessory1.png",
-      "description": "Kipas tangan batik dengan motif tradisional.",
-    },
-    {
-      "id": 15,
-      "name": "Sambal Terasi",
-      "price": 25000,
-      "image": "/images/products/sauce1.png",
-      "description": "Sambal terasi pedas dengan rasa khas.",
-    },
-    {
-      "id": 16,
-      "name": "Pisang Salai",
-      "price": 40000,
-      "image": "/images/products/snack6.png",
-      "description": "Pisang yang diasapi dengan rasa manis alami.",
-    },
-    {
-      "id": 17,
-      "name": "Kacamata Sunglass",
-      "price": 120000,
-      "image": "/images/products/accessory2.png",
-      "description": "Kacamata hitam stylish untuk melindungi mata dari sinar UV.",
-    },
-    {
-      "id": 18,
-      "name": "Perhiasan Emas Kalimantan",
-      "price": 900000,
-      "image": "/images/products/jewelry1.png",
-      "description": "Perhiasan emas khas Kalimantan dengan desain elegan.",
-    },
-    {
-      "id": 19,
-      "name": "Kopi Toraja",
-      "price": 80000,
-      "image": "/images/products/coffee2.png",
-      "description": "Kopi dari Toraja dengan rasa khas dan aroma kuat.",
-    },
-    {
-      "id": 20,
-      "name": "Ayam Penyet Surabaya",
-      "price": 45000,
-      "image": "/images/products/food3.png",
-      "description": "Ayam penyet dengan sambal terasi khas Surabaya.",
-    },
-  ],
+  recentProducts: [],
+  loading: false,
+  error: null,
+
+  currentMonthStats: null,
+  previousMonthStats: null,
 
   search: "",
   setSearch: (value) => set({ search: value }),
+
+  // ----------------------
+  // Helpers
+  // ----------------------
+  
+  // Fungsi untuk menyimpan stats bulanan
+  saveMonthlyStats: (stats) => {
+    const currentMonth = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
+    
+    // Jika bulan berubah, pindahkan current ke previous
+    if (stats.month !== currentMonth) {
+      set({
+        previousMonthStats: stats,
+        currentMonthStats: {
+          month: currentMonth,
+          totalProduk: 0,
+          totalReferall: 0,
+          pageViews: 0,
+        },
+      });
+    } else {
+      set({ currentMonthStats: stats });
+    }
+  },
+
+  // Fungsi untuk menghitung persentase perubahan
+  calculatePercentageChange: (current, previous) => {
+    if (previous === 0) return 0;
+    return Math.round(((current - previous) / previous) * 100);
+  },
 
   // ----------------------
   // Actions
@@ -288,41 +204,111 @@ export const useUserDashboardStore = create<UserDashboardState>((set) => ({
     })),
   setRecentProducts: (data) => set({ recentProducts: data }),
 
-  // Simulate fetch
+  // Fetch data
   fetchDashboardData: async () => {
-    await new Promise((resolve) => setTimeout(resolve, 800));
+    set({ loading: true, error: null });
 
-    set({
-      statsData: [
+    try {
+      const currentMonth = new Date().toISOString().slice(0, 7); // Format: YYYY-MM
+      
+      // Fetch dashboard stats
+      const statsResponse = await productAPI.getDashboardStats();
+      
+      // Fetch products
+      const productsResponse = await productAPI.getAll();
+
+      // Get state to access previous stats
+      const state = useUserDashboardStore.getState();
+      
+      // TODO: Fetch monthly stats dari API atau database
+      // Untuk sekarang, kita simulasikan dengan data dari storage atau state
+      const currentStats: MonthlyStats = {
+        month: currentMonth,
+        totalProduk: statsResponse.data.total,
+        totalReferall: 0, // TODO: Ganti dengan data real dari API
+        pageViews: 0, // TODO: Ganti dengan data real dari analytics
+      };
+
+      // Load previous month stats (misalnya dari API atau localStorage)
+      // TODO: Implementasi fetch data bulan sebelumnya dari backend
+      const previousStats = state.previousMonthStats || {
+        month: new Date(new Date().setMonth(new Date().getMonth() - 1))
+          .toISOString()
+          .slice(0, 7),
+        totalProduk: 0,
+        totalReferall: 0,
+        pageViews: 0,
+      };
+
+      // Calculate percentages
+      const produkPercentage = state.calculatePercentageChange(
+        currentStats.totalProduk,
+        previousStats.totalProduk
+      );
+      const referallPercentage = state.calculatePercentageChange(
+        currentStats.totalReferall,
+        previousStats.totalReferall
+      );
+      const pageViewsPercentage = state.calculatePercentageChange(
+        currentStats.pageViews,
+        previousStats.pageViews
+      );
+
+      // Map stats with percentages
+      const newStatsData: StatItem[] = [
         {
           title: "Total Produk",
-          value: 170,
-          percentage: 8.1,
+          value: statsResponse.data.total,
+          percentage: produkPercentage !== 0 ? produkPercentage : undefined,
           description: "Jumlah produk yang sudah tersedia di katalog",
         },
         {
           title: "Total Referall",
-          value: 160,
-          percentage: 25,
+          value: currentStats.totalReferall,
+          percentage: referallPercentage !== 0 ? referallPercentage : undefined,
           description: "Total keseluruhan referral yang berhasil bergabung",
         },
         {
           title: "Page Views",
-          value: 7.2,
-          percentage: 15,
+          value: currentStats.pageViews,
+          percentage: pageViewsPercentage !== 0 ? pageViewsPercentage : undefined,
           description: "Jumlah kunjungan yang tercatat",
         },
-      ],
-      earningsChart: {
-        filter: "month",
-        percentage: 10.4,
-        data: [
-          { label: "Week 1", amount: 450000 },
-          { label: "Week 2", amount: 700000 },
-          { label: "Week 3", amount: 630000 },
-          { label: "Week 4", amount: 820000 },
-        ],
-      },
-    });
+      ];
+
+      // Map products - take last 5 products
+      const recentProductsData: ProductItem[] = productsResponse.data
+        .slice(0, 5)
+        .map((p) => ({
+          id: parseInt(p.id),
+          name: p.name,
+          price: p.current_price,
+          image: p.catalog_photos && p.catalog_photos.length > 0
+            ? p.catalog_photos[0].path
+            : "/images/no-image.png",
+          description: p.description || "",
+          status: p.status === "published" ? "aktif" as const : "non-aktif" as const,
+          date: new Date(p.created_at).toLocaleDateString("id-ID"),
+        }));
+
+      // Save current month stats
+      state.saveMonthlyStats(currentStats);
+
+      set({
+        statsData: newStatsData,
+        recentProducts: recentProductsData,
+        loading: false,
+      });
+
+      // TODO: Implementasi penyimpanan stats ke backend untuk tracking bulanan
+      // Contoh: await productAPI.saveMonthlyStats(currentStats);
+      
+    } catch (error) {
+      console.error("Error fetching dashboard data:", error);
+      set({
+        error: error instanceof Error ? error.message : "Gagal memuat data dashboard",
+        loading: false,
+      });
+    }
   },
 }));
