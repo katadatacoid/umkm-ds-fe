@@ -14,7 +14,3 @@ pnpm dev
 bun dev
 ```
 "Auth"
-
-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
-
-https://chatgpt.com/share/68d50785-5630-800c-97de-356a7eb383fa

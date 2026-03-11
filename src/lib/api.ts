@@ -90,6 +90,21 @@ export interface AuthCode {
   expires_in: number;
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  umkm: {
+    id: string;
+    namaUsaha: string;
+    logo_img: string | null;
+    phone: string;
+    email: string;
+    status: string;
+  } | null;
+}
+
 export interface DashboardStats {
   activeUmkm: number;
   monthlyTransactions: number;
@@ -157,7 +172,6 @@ export interface UserDashboardResponse {
   data: UserDashboardStats;
 }
 
-// Tambahkan interface ini di bagian Types
 export interface Template {
   id: number;
   nama_template: string;
@@ -921,6 +935,86 @@ export const templateAPI = {
 
     if (!response.ok) {
       throw new Error(`Failed to fetch template with ID ${id}`);
+    }
+
+    return response.json();
+  },
+};
+
+// ============================================================
+// TAMBAHKAN di api.ts kamu — di bagian Types (atas file)
+// ============================================================
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  umkm: {
+    id: string;
+    namaUsaha: string;
+    logo_img: string | null;
+    phone: string;
+    email: string;
+    status: string;
+  } | null;
+}
+
+// ============================================================
+// TAMBAHKAN di api.ts kamu — di bagian bawah, setelah templateAPI
+// ============================================================
+
+export const userAPI = {
+  // GET /api/users/me — ambil profil user yang sedang login
+  async getMe(): Promise<{ success: boolean; data: UserProfile }> {
+    console.log("Fetching user profile...");
+    const response = await authenticatedFetch(`${API_URL}/api/users/me`);
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch user profile";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  // PUT /api/users/me — update profil + logo (multipart/form-data)
+  async updateMe(data: {
+    namaLengkap: string;
+    namaUsaha: string;
+    email: string;
+    noTelpon: string;
+    logo?: File;
+    passwordLama?: string;
+    passwordBaru?: string;
+  }): Promise<{ success: boolean; message: string }> {
+    console.log("Updating user profile...");
+
+    const formData = new FormData();
+    formData.append("namaLengkap", data.namaLengkap);
+    formData.append("namaUsaha", data.namaUsaha);
+    formData.append("email", data.email);
+    formData.append("noTelpon", data.noTelpon);
+    if (data.logo) formData.append("logo", data.logo);
+
+    // ✅ Hanya append jika ada isinya
+    if (data.passwordLama) formData.append("passwordLama", data.passwordLama);
+    if (data.passwordBaru) formData.append("passwordBaru", data.passwordBaru);
+
+    const response = await authenticatedFetch(`${API_URL}/api/users/me`, {
+      method: "PUT",
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || "Failed to update profile");
     }
 
     return response.json();

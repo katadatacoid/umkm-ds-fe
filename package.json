@@ -6,6 +6,7 @@
     "dev": "next dev --turbopack",
     "build": "next build --no-lint --turbopack",
     "start": "next start",
+    "start": "next start --port 3099",
     "lint": "eslint"
   },
   "dependencies": {
