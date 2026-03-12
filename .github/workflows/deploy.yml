@@ -9,7 +9,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: demo
     steps:
-      - uses: actions/checkout@v3  # Checkout the repository code
+      - uses: actions/checkout@v4  # Checkout the repository code
 
       - name: Set up SSH Connection
         uses: appleboy/ssh-action@v1.2.2 
@@ -57,7 +57,7 @@ jobs:
 
 
 
-            pm2 start npm --name "umkm-ds-fe   " -- start -- --port 3099  # Start the app on port 3001 with PM2
+            pm2 start npm --name "umkm-ds-fe" -- start -- --port 3099  # Start the app on port 3001 with PM2
 
             pm2 save
 
