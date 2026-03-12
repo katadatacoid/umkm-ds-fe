@@ -159,7 +159,7 @@ const LoginPage: React.FC = () => {
           {/* Test Credentials */}
           <div className="mt-6 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <p className="text-xs text-gray-600 text-center font-semibold mb-2">
-              Akun Testing:
+              Akun Testing::
             </p>
             <p className="text-xs text-gray-600 text-center">
               Email: <span className="font-mono">bob@example.com</span>
