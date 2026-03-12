@@ -28,7 +28,7 @@ jobs:
 
 
             if [ ! -d ".git" ]; then
-              git clone https://${{ secrets.DEV_GIT }}@github.com/katadatacoid/umkm-fe.git .
+              git clone https://${{ secrets.DEV_GIT }}@github.com/katadatacoid/umkm-ds-fe.git .
             fi
 
             # Source nvm to set up Node.js environment
