@@ -1,0 +1,70 @@
+name: Deploy to Dev Server
+on:
+  push:
+    branches:
+      - demo  # Trigger deployment on push to the 'demo' branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: demo
+    steps:
+      - uses: actions/checkout@v3  # Checkout the repository code
+
+      - name: Set up SSH Connection
+        uses: appleboy/ssh-action@v1.2.2 
+        with:
+          host: ${{ vars.DEV_CNTB_IP }}
+          username: ${{ vars.DEV_CNTB_USERNAME }}
+          password: ${{ secrets.DEV_CNTB_PASSWORD }}
+          port: 22
+          script: |
+            cd project-node/umkm-ds-fe
+  
+            
+            # Set up GitHub authentication using the token
+            git config --global credential.helper store
+            echo "https://:${{ secrets.DEV_GIT }}@github.com" > ~/.git-credentials  # Use PAT for authentication
+
+
+            if [ ! -d ".git" ]; then
+              git clone https://${{ secrets.DEV_GIT }}@github.com/katadatacoid/umkm-fe.git .
+            fi
+
+            # Source nvm to set up Node.js environment
+            source /home/katadata/.nvm/nvm.sh  # This is where nvm is installed
+            export NVM_DIR="/home/katadata/.nvm"
+            source "$NVM_DIR/nvm.sh"  # Initialize nvm
+            
+            # Pull the latest changes from the demo branch
+            git checkout demo && git pull origin demo
+
+
+            which npm
+            which pm2
+
+            # Install dependencies
+            npm install
+
+            # Build the Next.js app
+            npm run build
+
+            nvm use 22.7
+
+            # Stop and delete any existing pm2 process before starting a new one
+            pm2 stop umkm-ds-fe    || true  # Stop the app if it's running
+            pm2 delete umkm-ds-fe    || true  # Delete the app if it's running to ensure no duplicate processes
+
+
+
+            pm2 start npm --name "umkm-ds-fe   " -- start -- --port 3099  # Start the app on port 3001 with PM2
+
+            pm2 save
+
+
+            # Log the deployment result
+            if [ $? -eq 0 ]; then
+              echo "===== SUCCESS ====="
+            else
+              exit 1  # Fail the GitHub Action if deployment fails
+            fi
