@@ -98,6 +98,7 @@ export interface UserProfile {
   umkm: {
     id: string;
     namaUsaha: string;
+    description: string | null;
     logo_img: string | null;
     phone: string;
     email: string;
@@ -953,6 +954,7 @@ export interface UserProfile {
   umkm: {
     id: string;
     namaUsaha: string;
+    description: string | null; 
     logo_img: string | null;
     phone: string;
     email: string;
@@ -988,7 +990,7 @@ export const userAPI = {
   async updateMe(data: {
     namaLengkap: string;
     namaUsaha: string;
-    email: string;
+    description?: string;
     noTelpon: string;
     logo?: File;
     passwordLama?: string;
@@ -999,11 +1001,11 @@ export const userAPI = {
     const formData = new FormData();
     formData.append("namaLengkap", data.namaLengkap);
     formData.append("namaUsaha", data.namaUsaha);
-    formData.append("email", data.email);
+    if (data.description !== undefined) formData.append("description", data.description);
     formData.append("noTelpon", data.noTelpon);
     if (data.logo) formData.append("logo", data.logo);
 
-    // ✅ Hanya append jika ada isinya
+    // Hanya append jika ada isinya
     if (data.passwordLama) formData.append("passwordLama", data.passwordLama);
     if (data.passwordBaru) formData.append("passwordBaru", data.passwordBaru);
 

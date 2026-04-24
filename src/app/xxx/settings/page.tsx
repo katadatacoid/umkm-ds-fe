@@ -77,7 +77,6 @@ const UserSettingsPage = () => {
       const res = await userAPI.updateMe({
         namaLengkap: formData.namaLengkap,
         namaUsaha: formData.namaUsaha,
-        email: formData.email,
         noTelpon: formData.noTelpon,
         passwordLama: passwordLama || undefined,
         passwordBaru: passwordBaru || undefined,
