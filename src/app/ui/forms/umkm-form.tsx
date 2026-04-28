@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import SuccessModal from '@/app/ui/modal/SuccessModal';
+import ImageCropModal from '@/app/ui/modal/ImageCropModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -36,6 +37,8 @@ const TambahUMKMForm = () => {
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null); // ✅ crop
+  const [cropFileName, setCropFileName] = useState<string>('logo.jpg');
   const [saving, setSaving] = useState(false);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
 
@@ -46,7 +49,6 @@ const TambahUMKMForm = () => {
   const [generatingUrl, setGeneratingUrl] = useState(false);
   const [publicToken, setPublicToken] = useState('');
 
-  // Fetch public token on mount
   useEffect(() => {
     const fetchToken = async () => {
       try {
@@ -63,7 +65,6 @@ const TambahUMKMForm = () => {
     fetchToken();
   }, []);
 
-  // Fetch templates on mount
   useEffect(() => {
     const fetchTemplates = async () => {
       setLoadingTemplates(true);
@@ -103,17 +104,30 @@ const TambahUMKMForm = () => {
     setFormData({ ...formData, [name]: value });
   };
 
+  // ✅ Saat user pilih file → buka crop modal dulu
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1 * 1024 * 1024) {
-      alert('Ukuran file tidak boleh lebih dari 1MB');
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Ukuran file tidak boleh lebih dari 5MB');
       return;
     }
-    setLogoFile(file);
+    setCropFileName(file.name);
     const reader = new FileReader();
-    reader.onloadend = () => setLogoPreview(reader.result as string);
+    reader.onloadend = () => setCropSrc(reader.result as string);
     reader.readAsDataURL(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ✅ Setelah crop selesai
+  const handleCropComplete = (croppedFile: File) => {
+    setLogoFile(croppedFile);
+    setLogoPreview(URL.createObjectURL(croppedFile));
+    setCropSrc(null);
+  };
+
+  const handleCropCancel = () => {
+    setCropSrc(null);
   };
 
   const handleRemoveLogo = () => {
@@ -203,6 +217,16 @@ const TambahUMKMForm = () => {
 
   return (
     <>
+      {/* ✅ Crop Modal */}
+      {cropSrc && (
+        <ImageCropModal
+          imageSrc={cropSrc}
+          originalFileName={cropFileName}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
+
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => {
@@ -390,7 +414,7 @@ const TambahUMKMForm = () => {
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <p className="text-sm text-gray-500">Upload logo UMKM (maks 1MB)</p>
+                  <p className="text-sm text-gray-500">Upload logo UMKM (maks 1MB setelah crop)</p>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -420,6 +444,7 @@ const TambahUMKMForm = () => {
                 </div>
               </div>
             </div>
+
           </div>
 
           {/* Buttons */}
