@@ -5,6 +5,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { userAPI } from '@/lib/api';
 import SuccessModal from '@/app/ui/modal/SuccessModal';
 import ErrorModal from '@/app/ui/modal/ErrorModal';
+import ImageCropModal from '@/app/ui/modal/ImageCropModal';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
 
@@ -14,13 +15,15 @@ const UserSettingsPage = () => {
   const [formData, setFormData] = useState({
     namaLengkap: '',
     namaUsaha: '',
-    email: '',
+    description: '',
     noTelpon: '',
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [existingLogo, setExistingLogo] = useState<string | null>(null);
+  const [cropSrc, setCropSrc] = useState<string | null>(null); // ✅ Sumber gambar untuk crop
+  const [cropFileName, setCropFileName] = useState<string>('logo.jpg');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [passwordLama, setPasswordLama] = useState('');
@@ -30,23 +33,21 @@ const UserSettingsPage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Helper untuk tampilkan error modal
   const showError = (message: string) => {
     setErrorMessage(message);
     setShowErrorModal(true);
   };
 
-  // Fetch profil saat mount
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         const res = await userAPI.getMe();
         if (res.success) {
-          const { name, email, phone, umkm } = res.data;
+          const { name, phone, umkm } = res.data;
           setFormData({
             namaLengkap: name || '',
             namaUsaha: umkm?.namaUsaha || '',
-            email: email || '',
+            description: umkm?.description || '',
             noTelpon: phone || '',
           });
           if (umkm?.logo_img) {
@@ -59,7 +60,6 @@ const UserSettingsPage = () => {
         setLoading(false);
       }
     };
-
     fetchProfile();
   }, []);
 
@@ -68,17 +68,31 @@ const UserSettingsPage = () => {
     setFormData({ ...formData, [name]: value });
   };
 
+  // ✅ Saat user pilih file → buka crop modal dulu
   const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 1 * 1024 * 1024) {
-      showError('Ukuran file tidak boleh lebih dari 1MB');
+    if (file.size > 5 * 1024 * 1024) {
+      showError('Ukuran file tidak boleh lebih dari 5MB');
       return;
     }
-    setLogoFile(file);
+    setCropFileName(file.name);
     const reader = new FileReader();
-    reader.onloadend = () => setLogoPreview(reader.result as string);
+    reader.onloadend = () => setCropSrc(reader.result as string);
     reader.readAsDataURL(file);
+    // Reset input agar bisa pilih file sama lagi
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  // ✅ Setelah crop selesai
+  const handleCropComplete = (croppedFile: File) => {
+    setLogoFile(croppedFile);
+    setLogoPreview(URL.createObjectURL(croppedFile));
+    setCropSrc(null);
+  };
+
+  const handleCropCancel = () => {
+    setCropSrc(null);
   };
 
   const handleRemoveLogo = () => {
@@ -90,8 +104,8 @@ const UserSettingsPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.namaLengkap || !formData.namaUsaha || !formData.email) {
-      showError('Mohon lengkapi Nama Lengkap, Nama Usaha, dan Email');
+    if (!formData.namaLengkap || !formData.namaUsaha) {
+      showError('Mohon lengkapi Nama Lengkap dan Nama Usaha');
       return;
     }
 
@@ -105,7 +119,7 @@ const UserSettingsPage = () => {
       const res = await userAPI.updateMe({
         namaLengkap: formData.namaLengkap,
         namaUsaha: formData.namaUsaha,
-        email: formData.email,
+        description: formData.description,
         noTelpon: formData.noTelpon,
         logo: logoFile ?? undefined,
         passwordLama: passwordLama || undefined,
@@ -136,7 +150,16 @@ const UserSettingsPage = () => {
 
   return (
     <DashboardUserLayout path="user">
-      {/* Success Modal */}
+      {/* ✅ Crop Modal */}
+      {cropSrc && (
+        <ImageCropModal
+          imageSrc={cropSrc}
+          originalFileName={cropFileName}
+          onCropComplete={handleCropComplete}
+          onCancel={handleCropCancel}
+        />
+      )}
+
       <SuccessModal
         isOpen={showSuccessModal}
         onClose={() => setShowSuccessModal(false)}
@@ -145,7 +168,6 @@ const UserSettingsPage = () => {
         buttonLabel="Tutup"
       />
 
-      {/* Error Modal */}
       <ErrorModal
         isOpen={showErrorModal}
         onClose={() => setShowErrorModal(false)}
@@ -158,9 +180,7 @@ const UserSettingsPage = () => {
 
         {/* Header */}
         <div className="w-full flex flex-col sm:flex-row justify-between items-center p-4 sm:p-5 bg-white shadow-sm rounded-lg">
-          <div className="flex flex-col sm:flex-row items-center sm:mr-4 text-center sm:text-left">
-            <div className="text-base sm:text-xl font-semibold text-gray-800">Pengaturan</div>
-          </div>
+          <div className="text-base sm:text-xl font-semibold text-gray-800">Pengaturan</div>
         </div>
 
         {/* Card Form */}
@@ -210,36 +230,36 @@ const UserSettingsPage = () => {
                   />
                 </div>
 
-                {/* Email & No Telpon side by side */}
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex flex-col flex-1">
-                    <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                      Email
-                    </label>
-                    <input
-                      type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
-                      placeholder="johndoe@gmail.com"
-                    />
-                  </div>
-                  <div className="flex flex-col flex-1">
-                    <label htmlFor="noTelpon" className="text-sm font-medium text-gray-700">
-                      No Telpon
-                    </label>
-                    <input
-                      type="text"
-                      id="noTelpon"
-                      name="noTelpon"
-                      value={formData.noTelpon}
-                      onChange={handleChange}
-                      className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
-                      placeholder="08********"
-                    />
-                  </div>
+                {/* Deskripsi Usaha */}
+                <div className="flex flex-col">
+                  <label htmlFor="description" className="text-sm font-medium text-gray-700">
+                    Deskripsi Usaha
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    rows={4}
+                    className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 resize-none"
+                    placeholder="Ceritakan tentang usaha Anda..."
+                  />
+                </div>
+
+                {/* No Telpon */}
+                <div className="flex flex-col">
+                  <label htmlFor="noTelpon" className="text-sm font-medium text-gray-700">
+                    No Telpon
+                  </label>
+                  <input
+                    type="text"
+                    id="noTelpon"
+                    name="noTelpon"
+                    value={formData.noTelpon}
+                    onChange={handleChange}
+                    className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+                    placeholder="08********"
+                  />
                 </div>
 
                 {/* Ganti Password */}
@@ -268,9 +288,7 @@ const UserSettingsPage = () => {
                         value={passwordBaru}
                         onChange={(e) => setPasswordBaru(e.target.value)}
                         className={`mt-1 px-4 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 ${
-                          passwordBaru && !passwordLama
-                            ? 'border-red-400 bg-red-50'
-                            : 'border-gray-200'
+                          passwordBaru && !passwordLama ? 'border-red-400 bg-red-50' : 'border-gray-200'
                         }`}
                         placeholder="Password baru"
                       />
@@ -288,11 +306,9 @@ const UserSettingsPage = () => {
 
                 {/* Logo UMKM Upload */}
                 <div className="flex flex-col">
-                  <label className="text-sm font-medium text-gray-700 mb-1">
-                    Logo UMKM
-                  </label>
+                  <label className="text-sm font-medium text-gray-700 mb-1">Logo UMKM</label>
                   <div className="border border-gray-200 rounded-md p-4 flex items-center gap-4">
-                    {/* Preview Box */}
+                    {/* Preview */}
                     <div className="w-20 h-20 border border-gray-200 rounded-md flex items-center justify-center overflow-hidden bg-gray-50 flex-shrink-0">
                       {currentLogoSrc ? (
                         <img
@@ -318,9 +334,9 @@ const UserSettingsPage = () => {
                       )}
                     </div>
 
-                    {/* Upload Controls */}
+                    {/* Controls */}
                     <div className="flex flex-col gap-1">
-                      <p className="text-sm text-gray-500">Upload logo UMKM (maks 1MB)</p>
+                      <p className="text-sm text-gray-500">Upload logo UMKM (maks 1MB setelah crop)</p>
                       <div className="flex gap-2 mt-1">
                         <button
                           type="button"
@@ -352,6 +368,7 @@ const UserSettingsPage = () => {
                     </div>
                   </div>
                 </div>
+
               </div>
 
               {/* Action Buttons */}
@@ -374,7 +391,6 @@ const UserSettingsPage = () => {
             </form>
           )}
         </div>
-
       </div>
     </DashboardUserLayout>
   );
