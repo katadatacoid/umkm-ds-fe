@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Sidebar from "@/app/ui/sidebar/sidebar"; // Import Sidebar Component
 import MobileNavbar from "@/app/ui/nav/mobile-navbar";
-import { faBars, faBell, faGear, faHome, faReceipt, faShareAlt, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faBars, faBell, faEnvelope, faGear, faHome, faReceipt, faShareAlt, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { usePathname } from "next/navigation"; 
 import useStore from "@/stores/use-store";
 interface DashboardLayoutProps {
@@ -51,6 +51,7 @@ const DashboardAdminLayout: React.FC<DashboardLayoutProps> = ({ children, path }
         { href: `/${path}`, icon: faHome, label: "Beranda", hasDivider: false },
         { href: `/${path}/users-management`, icon: faUsers, label: "User Management", hasDivider: false },
         { href: `/${path}/transaction`, icon: faReceipt, label: "Transaksi", hasDivider: false },
+        { href: `/${path}/inbox`, icon: faEnvelope, label: "Inbox", hasDivider: false },
         { href: `/${path}/affiliate`, icon: faShareAlt, label: "Affiliate", hasDivider: true },
         { href: `/${path}/settings`, icon: faGear, label: "Pengaturan", hasDivider: false },
     ];

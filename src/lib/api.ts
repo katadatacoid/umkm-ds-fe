@@ -1022,3 +1022,87 @@ export const userAPI = {
     return response.json();
   },
 };
+
+// ============================================================
+// Contact / Inbox API
+// ============================================================
+
+export interface ContactStatsData {
+  total?: number;
+  unread?: number;
+  read?: number;
+  replied?: number;
+  archived?: number;
+  today?: number;
+  this_week?: number;
+  this_month?: number;
+  [key: string]: number | string | undefined;
+}
+
+export interface ContactStatsResponse {
+  success: boolean;
+  data: ContactStatsData;
+  message?: string;
+}
+
+export interface ContactMessage {
+  id: number | string;
+  name: string;
+  email: string;
+  message: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  status: string;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface ContactListResponse {
+  success: boolean;
+  data: ContactMessage[];
+  count?: number;
+  message?: string;
+}
+
+export const contactAPI = {
+  async getStats(): Promise<ContactStatsResponse> {
+    console.log("Fetching contact stats...");
+    const response = await authenticatedFetch(`${API_URL}/api/contact/stats`);
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch contact stats";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  async getAll(search?: string): Promise<ContactListResponse> {
+    const url =
+      search && search.trim()
+        ? `${API_URL}/api/contact?search=${encodeURIComponent(search.trim())}`
+        : `${API_URL}/api/contact`;
+
+    console.log("Fetching contact list from:", url);
+    const response = await authenticatedFetch(url);
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch contact list";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+};
