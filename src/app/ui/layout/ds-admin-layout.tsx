@@ -1,11 +1,12 @@
 'use client'
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Sidebar from "@/app/ui/sidebar/sidebar"; // Import Sidebar Component
 import MobileNavbar from "@/app/ui/nav/mobile-navbar";
 import { faBars, faBell, faEnvelope, faGear, faHome, faReceipt, faShareAlt, faUser, faUsers } from "@fortawesome/free-solid-svg-icons";
-import { usePathname } from "next/navigation"; 
+import { usePathname } from "next/navigation";
 import useStore from "@/stores/use-store";
+import { contactAPI, getUserInfo } from "@/lib/api";
 interface DashboardLayoutProps {
     children: React.ReactNode;  // Add children prop type for dynamic content
     path: string;
@@ -13,6 +14,29 @@ interface DashboardLayoutProps {
 
 const DashboardAdminLayout: React.FC<DashboardLayoutProps> = ({ children, path }) => {
     const { isSidebarOpen, toggleSidebar } = useStore();
+    const pathname = usePathname();
+    const [inboxUnread, setInboxUnread] = useState<number>(0);
+
+    useEffect(() => {
+        const userInfo = getUserInfo();
+        if (!userInfo || (userInfo.scope || "user") !== "admin") return;
+
+        let cancelled = false;
+        contactAPI
+            .getStats()
+            .then((res) => {
+                if (cancelled) return;
+                const n = res.data?.new;
+                if (typeof n === "number") setInboxUnread(n);
+            })
+            .catch(() => {
+                // Silent fail — badge optional.
+            });
+
+        return () => {
+            cancelled = true;
+        };
+    }, [pathname]);
 
     // Define custom handlers
     const handleMenuClick = () => {
@@ -51,19 +75,14 @@ const DashboardAdminLayout: React.FC<DashboardLayoutProps> = ({ children, path }
         { href: `/${path}`, icon: faHome, label: "Beranda", hasDivider: false },
         { href: `/${path}/users-management`, icon: faUsers, label: "User Management", hasDivider: false },
         { href: `/${path}/transaction`, icon: faReceipt, label: "Transaksi", hasDivider: false },
-        { href: `/${path}/inbox`, icon: faEnvelope, label: "Inbox", hasDivider: false },
+        { href: `/${path}/inbox`, icon: faEnvelope, label: "Inbox", hasDivider: false, badge: inboxUnread },
         { href: `/${path}/affiliate`, icon: faShareAlt, label: "Affiliate", hasDivider: true },
         { href: `/${path}/settings`, icon: faGear, label: "Pengaturan", hasDivider: false },
     ];
 
-
-
     const getLinkClass = (href: string) => {
-        return usePathname() === href ? 'text-green-c bg-green-100 rounded-full' : '';
+        return pathname === href ? 'text-green-c bg-green-100 rounded-full' : '';
     };
-
-
-    console.log(usePathname());
 
 
     return (

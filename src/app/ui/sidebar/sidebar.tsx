@@ -9,6 +9,7 @@ interface LinkItem {
   icon: IconDefinition;
   label: string;
   hasDivider: boolean;
+  badge?: number;
 }
 
 interface SidebarProps {
@@ -86,7 +87,15 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
                       icon={link.icon}
                       className="mr-0 lg:mr-3 text-base lg:text-[15px] shrink-0 group-hover:text-green-600"
                     />
-                    <span className="hidden lg:inline text-sm">{link.label}</span>
+                    <span className="hidden lg:inline text-sm flex-1">{link.label}</span>
+                    {link.badge && link.badge > 0 ? (
+                      <span
+                        className="ml-auto rounded-full bg-blue-600 text-white text-[10px] font-semibold px-1.5 py-0.5 min-w-[18px] text-center hidden lg:inline-block"
+                        aria-label={`${link.badge} belum dibaca`}
+                      >
+                        {link.badge > 99 ? "99+" : link.badge}
+                      </span>
+                    ) : null}
                   </Link>
                 </li>
 

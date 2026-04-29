@@ -1057,16 +1057,50 @@ export interface ContactMessage {
   updated_at?: string | null;
 }
 
+export interface ContactPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface ContactListResponse {
   success: boolean;
   data: ContactMessage[];
-  count?: number;
+  pagination?: ContactPagination;
   message?: string;
 }
 
+export interface ContactDetailResponse {
+  success: boolean;
+  data: ContactMessage;
+  message?: string;
+}
+
+export interface ContactBulkUpdateResponse {
+  success: boolean;
+  message?: string;
+  count?: number;
+}
+
+export interface ContactListParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+}
+
+const buildContactQuery = (params: ContactListParams = {}) => {
+  const q = new URLSearchParams();
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.status) q.set("status", params.status);
+  if (params.search && params.search.trim()) q.set("search", params.search.trim());
+  return q.toString();
+};
+
 export const contactAPI = {
   async getStats(): Promise<ContactStatsResponse> {
-    console.log("Fetching contact stats...");
     const response = await authenticatedFetch(`${API_URL}/api/contact/stats`);
 
     if (!response.ok) {
@@ -1083,17 +1117,78 @@ export const contactAPI = {
     return response.json();
   },
 
-  async getAll(search?: string): Promise<ContactListResponse> {
-    const url =
-      search && search.trim()
-        ? `${API_URL}/api/contact?search=${encodeURIComponent(search.trim())}`
-        : `${API_URL}/api/contact`;
+  async getAll(params: ContactListParams = {}): Promise<ContactListResponse> {
+    const qs = buildContactQuery(params);
+    const url = qs ? `${API_URL}/api/contact?${qs}` : `${API_URL}/api/contact`;
 
-    console.log("Fetching contact list from:", url);
     const response = await authenticatedFetch(url);
 
     if (!response.ok) {
       let errorMessage = "Failed to fetch contact list";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  // Loop semua halaman (limit max 100) dan gabungkan datanya.
+  async getAllPaginated(
+    params: Omit<ContactListParams, "page" | "limit"> = {}
+  ): Promise<ContactListResponse> {
+    const limit = 100;
+    const all: ContactMessage[] = [];
+    let page = 1;
+    let pagination: ContactPagination | undefined;
+
+    while (true) {
+      const res = await this.getAll({ ...params, page, limit });
+      if (res.data?.length) all.push(...res.data);
+      pagination = res.pagination;
+      const totalPages = pagination?.totalPages ?? 1;
+      if (page >= totalPages || !res.data?.length) break;
+      page += 1;
+    }
+
+    return {
+      success: true,
+      data: all,
+      pagination: pagination
+        ? { ...pagination, page: 1, limit }
+        : { page: 1, limit, total: all.length, totalPages: 1 },
+    };
+  },
+
+  async getById(id: string | number): Promise<ContactDetailResponse> {
+    const response = await authenticatedFetch(`${API_URL}/api/contact/${id}`);
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch contact detail";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  async markAllRead(): Promise<ContactBulkUpdateResponse> {
+    const response = await authenticatedFetch(
+      `${API_URL}/api/contact/mark-all-read`,
+      { method: "PATCH" }
+    );
+
+    if (!response.ok) {
+      let errorMessage = "Failed to mark all as read";
       try {
         const errorData = await response.json();
         errorMessage = errorData.message || errorMessage;
