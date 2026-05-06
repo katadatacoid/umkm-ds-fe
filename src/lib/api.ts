@@ -1201,3 +1201,339 @@ export const contactAPI = {
     return response.json();
   },
 };
+
+// ============================================================
+// Storefront (Landing Page UMKM) API
+// Base path: /storefront
+// ============================================================
+
+export type SectionKey =
+  | "hero"
+  | "who_we_are"
+  | "our_products"
+  | "marquee"
+  | "why_choose_us"
+  | "explore_products"
+  | "blog_insights"
+  | "footer"
+  | string;
+
+export interface LandingSection<TContent = unknown> {
+  id: string;
+  user_product_id: string;
+  template_id: number;
+  section_key: SectionKey;
+  is_visible: boolean;
+  sort_order: number;
+  content: TContent;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Faq {
+  id: string;
+  user_product_id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Testimonial {
+  id: string;
+  user_product_id: string;
+  customer_name: string;
+  customer_role: string | null;
+  avatar_url: string | null;
+  rating: number;
+  body: string;
+  is_featured: boolean;
+  is_visible: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BlogStatus = "draft" | "published" | "archived";
+
+export interface BlogPost {
+  id: string;
+  user_product_id: string;
+  slug: string;
+  title: string;
+  category: string | null;
+  excerpt: string | null;
+  body: string;
+  cover_image_url: string | null;
+  read_minutes: number | null;
+  status: BlogStatus;
+  is_featured: boolean;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ListResponse<T> {
+  success: true;
+  count?: number;
+  data: T[];
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
+}
+
+interface ItemResponse<T> {
+  success: true;
+  data: T;
+}
+
+async function unwrapJson(response: Response, fallback: string) {
+  if (!response.ok) {
+    let msg = fallback;
+    try {
+      const err = await response.json();
+      msg = err.message || msg;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+  return response.json();
+}
+
+let _cachedUserProductId: string | null = null;
+
+export async function resolveUserProductId(force = false): Promise<string> {
+  if (!force && _cachedUserProductId) return _cachedUserProductId;
+
+  const res = await productAPI.getAll();
+  const first = res.data?.[0];
+  if (!first?.user_product_id) {
+    throw new Error("Tidak dapat menentukan user_product_id. Pastikan akun memiliki UMKM aktif.");
+  }
+  _cachedUserProductId = String(first.user_product_id);
+  return _cachedUserProductId;
+}
+
+export function clearUserProductIdCache() {
+  _cachedUserProductId = null;
+}
+
+function publicFetch(path: string): Promise<Response> {
+  return fetch(`${API_URL}${path}`, { headers: { "Content-Type": "application/json" } });
+}
+
+export const landingSectionsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    template_id?: number;
+    include_hidden?: boolean;
+  }): Promise<ListResponse<LandingSection>> {
+    const qs = new URLSearchParams();
+    qs.append("user_product_id", String(params.user_product_id));
+    if (params.template_id !== undefined) qs.append("template_id", String(params.template_id));
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/landing-sections/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat sections");
+  },
+
+  async getByKey(params: {
+    user_product_id: string | number;
+    template_id: number;
+    section_key: string;
+  }): Promise<ItemResponse<LandingSection>> {
+    const qs = new URLSearchParams({
+      user_product_id: String(params.user_product_id),
+      template_id: String(params.template_id),
+      section_key: params.section_key,
+    });
+    const res = await publicFetch(`/storefront/landing-sections/by-key?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat section");
+  },
+
+  async upsert(
+    section_key: string,
+    body: { template_id: number; content: unknown; is_visible?: boolean; sort_order?: number }
+  ): Promise<ItemResponse<LandingSection>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing-sections/${encodeURIComponent(section_key)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menyimpan section");
+  },
+};
+
+export const faqsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    include_hidden?: boolean;
+  }): Promise<ListResponse<Faq>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/faqs/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat FAQ");
+  },
+
+  async create(body: {
+    question: string;
+    answer: string;
+    sort_order?: number;
+    is_visible?: boolean;
+  }): Promise<ItemResponse<Faq>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/faqs`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menambahkan FAQ");
+  },
+
+  async update(
+    id: string | number,
+    body: Partial<{ question: string; answer: string; sort_order: number; is_visible: boolean }>
+  ): Promise<ItemResponse<Faq>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/faqs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui FAQ");
+  },
+
+  async remove(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/faqs/${id}`, { method: "DELETE" });
+    return unwrapJson(res, "Gagal menghapus FAQ");
+  },
+};
+
+export const testimonialsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    featured?: boolean;
+    include_hidden?: boolean;
+  }): Promise<ListResponse<Testimonial>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.featured !== undefined) qs.append("featured", String(params.featured));
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/testimonials/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat testimonial");
+  },
+
+  async create(body: {
+    customer_name: string;
+    body: string;
+    customer_role?: string | null;
+    avatar_url?: string | null;
+    rating?: number;
+    is_featured?: boolean;
+    is_visible?: boolean;
+    sort_order?: number;
+  }): Promise<ItemResponse<Testimonial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/testimonials`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menambahkan testimonial");
+  },
+
+  async update(
+    id: string | number,
+    body: Partial<{
+      customer_name: string;
+      body: string;
+      customer_role: string | null;
+      avatar_url: string | null;
+      rating: number;
+      is_featured: boolean;
+      is_visible: boolean;
+      sort_order: number;
+    }>
+  ): Promise<ItemResponse<Testimonial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/testimonials/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui testimonial");
+  },
+
+  async remove(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/testimonials/${id}`, { method: "DELETE" });
+    return unwrapJson(res, "Gagal menghapus testimonial");
+  },
+};
+
+export const blogPostsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    status?: BlogStatus | "all";
+    featured?: boolean;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ListResponse<BlogPost>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.status) qs.append("status", params.status);
+    if (params.featured !== undefined) qs.append("featured", String(params.featured));
+    if (params.search) qs.append("search", params.search);
+    if (params.page) qs.append("page", String(params.page));
+    if (params.limit) qs.append("limit", String(params.limit));
+    const res = await publicFetch(`/storefront/blog-posts/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat blog post");
+  },
+
+  async getBySlug(params: {
+    user_product_id: string | number;
+    slug: string;
+  }): Promise<ItemResponse<BlogPost>> {
+    const qs = new URLSearchParams({
+      user_product_id: String(params.user_product_id),
+      slug: params.slug,
+    });
+    const res = await publicFetch(`/storefront/blog-posts/by-slug?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat blog post");
+  },
+
+  async create(body: {
+    slug: string;
+    title: string;
+    body: string;
+    category?: string | null;
+    excerpt?: string | null;
+    cover_image_url?: string | null;
+    read_minutes?: number | null;
+    status?: BlogStatus;
+    is_featured?: boolean;
+    published_at?: string | null;
+  }): Promise<ItemResponse<BlogPost>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menambahkan blog post");
+  },
+
+  async update(
+    id: string | number,
+    body: Partial<{
+      slug: string;
+      title: string;
+      body: string;
+      category: string | null;
+      excerpt: string | null;
+      cover_image_url: string | null;
+      read_minutes: number | null;
+      status: BlogStatus;
+      is_featured: boolean;
+      published_at: string | null;
+    }>
+  ): Promise<ItemResponse<BlogPost>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui blog post");
+  },
+
+  async remove(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts/${id}`, { method: "DELETE" });
+    return unwrapJson(res, "Gagal menghapus blog post");
+  },
+};

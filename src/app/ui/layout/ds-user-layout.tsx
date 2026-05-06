@@ -11,8 +11,11 @@ import {
   faReceipt,
   faShareAlt,
   faUser,
-  faUsers,
   faBoxOpen,
+  faPalette,
+  faCircleQuestion,
+  faComments,
+  faNewspaper,
 } from "@fortawesome/free-solid-svg-icons";
 import { usePathname } from "next/navigation";
 import useStore from "@/stores/use-store";
@@ -63,9 +66,33 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       href: `/${path}/products-management`,
       icon: faBoxOpen,
       label: "Product Management",
+      hasDivider: true,
+    },
+    {
+      href: `/${path}/storefront/landing-sections`,
+      icon: faPalette,
+      label: "Landing Page",
       hasDivider: false,
     },
-    { href: `/${path}/affiliate`, icon: faShareAlt, label: "Affiliate", hasDivider: true },
+    {
+      href: `/${path}/storefront/faqs`,
+      icon: faCircleQuestion,
+      label: "FAQ",
+      hasDivider: false,
+    },
+    {
+      href: `/${path}/storefront/testimonials`,
+      icon: faComments,
+      label: "Testimonial",
+      hasDivider: false,
+    },
+    {
+      href: `/${path}/storefront/blog-posts`,
+      icon: faNewspaper,
+      label: "Blog Post",
+      hasDivider: true,
+    },
+    { href: `/${path}/affiliate`, icon: faShareAlt, label: "Affiliate", hasDivider: false },
     { href: `/${path}/settings`, icon: faGear, label: "Pengaturan", hasDivider: false },
   ];
 
