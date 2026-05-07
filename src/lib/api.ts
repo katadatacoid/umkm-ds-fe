@@ -370,8 +370,32 @@ export const authAPI = {
     return tokens;
   },
 
-  logout() {
+  // POST /login/logout
+  // Authorization: Bearer <access_token>
+  // Body (opsional): { "refresh_token": "<refresh_token>" }
+  async logout(): Promise<void> {
+    const accessToken = getAccessToken();
+    const refreshToken = getRefreshToken();
+
+    if (accessToken) {
+      try {
+        await fetch(`${API_URL}/login/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
+        });
+      } catch (error) {
+        console.error('Logout API call failed:', error);
+      }
+    }
+
     clearTokens();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user_info');
+    }
   },
 };
 

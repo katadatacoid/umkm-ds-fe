@@ -1,8 +1,11 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
+import { faRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { getUserFromToken } from "@/lib/utils";
+import { authAPI } from "@/lib/api";
 
 interface LinkItem {
   href: string;
@@ -21,14 +24,35 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLinkClass }) => {
   const [userName, setUserName] = useState<string>("User");
+  const [userEmail, setUserEmail] = useState<string>("");
+  const [loggingOut, setLoggingOut] = useState(false);
+  const router = useRouter();
 
   // Ambil nama user dari token saat component mount
   useEffect(() => {
     const user = getUserFromToken();
-    if (user && user.name) {
-      setUserName(user.name);
+    if (user) {
+      if (user.name) setUserName(user.name);
+      if (user.email) setUserEmail(user.email);
     }
   }, []);
+
+  const handleLogout = useCallback(async () => {
+    if (loggingOut) return;
+    const confirmed =
+      typeof window !== "undefined"
+        ? window.confirm("Yakin ingin keluar dari akun ini?")
+        : true;
+    if (!confirmed) return;
+
+    setLoggingOut(true);
+    try {
+      await authAPI.logout();
+    } finally {
+      setLoggingOut(false);
+      router.replace("/");
+    }
+  }, [loggingOut, router]);
 
   // Tutup otomatis ketika klik link di mobile (lg:hidden)
   const handleLinkClick = useCallback(() => {
@@ -109,17 +133,47 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
           </ul>
         </nav>
 
-        {/* Fixed bottom user info */}
-        <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-4 hidden sm:flex items-center">
-          <img
-            src="https://static.wikia.nocookie.net/umamusume/images/3/39/Oguri_Cap_%28Race%29.png"
-            alt="User avatar"
-            className="w-10 h-10 rounded-full object-cover"
-          />
-          <div className="flex flex-col ml-2">
-            <span className="text-xs text-gray-500">Welcome Back</span>
-            <span className="text-sm font-medium text-gray-700">{userName}</span>
+        {/* Fixed bottom: profile + logout */}
+        <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-4 hidden sm:flex flex-col gap-2 border-t border-gray-100 bg-white">
+          {/* Profile */}
+          <div className="flex items-center">
+            <div className="flex w-10 h-10 items-center justify-center rounded-full bg-green-100 text-green-700 font-semibold text-sm shrink-0">
+              {(userName || "U").trim().charAt(0).toUpperCase()}
+            </div>
+
+            <div className="hidden lg:flex flex-col ml-2 min-w-0 flex-1">
+              <span className="text-xs text-gray-500">Welcome Back</span>
+              <span
+                className="text-sm font-medium text-gray-700 truncate"
+                title={userName}
+              >
+                {userName}
+              </span>
+              {userEmail && (
+                <span
+                  className="text-[11px] text-gray-400 truncate"
+                  title={userEmail}
+                >
+                  {userEmail}
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* Logout button — tepat di bawah profile */}
+          <button
+            type="button"
+            onClick={handleLogout}
+            disabled={loggingOut}
+            aria-label="Logout"
+            title="Logout"
+            className="w-full inline-flex items-center justify-center lg:justify-start gap-2 rounded-md border border-red-200 bg-white px-2 lg:px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
+          >
+            <FontAwesomeIcon icon={faRightFromBracket} className="text-sm" />
+            <span className="hidden lg:inline">
+              {loggingOut ? "Sedang keluar..." : "Logout"}
+            </span>
+          </button>
         </div>
       </aside>
     </>
