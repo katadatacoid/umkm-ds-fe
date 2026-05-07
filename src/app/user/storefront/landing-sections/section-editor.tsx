@@ -1,7 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { LandingSection } from "@/lib/api";
+import { getSectionForm } from "./forms";
+import { decodeStringFields } from "./forms/shared";
 
 interface Props {
   section: LandingSection;
@@ -23,7 +25,18 @@ function formatJson(value: unknown): string {
 }
 
 export default function SectionEditor({ section, templateId, onSave }: Props) {
-  const [contentText, setContentText] = useState(formatJson(section.content));
+  const formDef = useMemo(() => getSectionForm(section.section_key), [section.section_key]);
+
+  const initialContent = useMemo(() => {
+    const decoded = decodeStringFields(section.content ?? {});
+    if (formDef && (decoded == null || Object.keys(decoded as object).length === 0)) {
+      return formDef.defaults();
+    }
+    return decoded;
+  }, [section.id, section.content, formDef]);
+
+  const [content, setContent] = useState<unknown>(initialContent);
+  const [rawJson, setRawJson] = useState<string>(formatJson(initialContent));
   const [isVisible, setIsVisible] = useState(section.is_visible);
   const [sortOrder, setSortOrder] = useState<number>(section.sort_order);
   const [jsonError, setJsonError] = useState<string | null>(null);
@@ -31,37 +44,33 @@ export default function SectionEditor({ section, templateId, onSave }: Props) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    setContentText(formatJson(section.content));
+    setContent(initialContent);
+    setRawJson(formatJson(initialContent));
     setIsVisible(section.is_visible);
     setSortOrder(section.sort_order);
     setJsonError(null);
     setSaved(false);
   }, [section.id]);
 
-  const handleFormat = () => {
-    try {
-      const parsed = JSON.parse(contentText);
-      setContentText(JSON.stringify(parsed, null, 2));
-      setJsonError(null);
-    } catch (e) {
-      setJsonError(e instanceof Error ? e.message : "JSON tidak valid");
-    }
-  };
-
   const handleSave = async () => {
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(contentText);
-    } catch (e) {
-      setJsonError(e instanceof Error ? e.message : "JSON tidak valid");
-      return;
+    let payload: unknown = content;
+
+    // Untuk section_key tanpa form khusus, parse textarea fallback.
+    if (!formDef) {
+      try {
+        payload = JSON.parse(rawJson);
+        setJsonError(null);
+      } catch (e) {
+        setJsonError(e instanceof Error ? e.message : "JSON tidak valid");
+        return;
+      }
     }
-    setJsonError(null);
+
     setSaving(true);
     try {
       await onSave({
         template_id: templateId,
-        content: parsed,
+        content: payload,
         is_visible: isVisible,
         sort_order: Number(sortOrder) || 0,
       });
@@ -74,8 +83,18 @@ export default function SectionEditor({ section, templateId, onSave }: Props) {
     }
   };
 
+  const handleFormatRaw = () => {
+    try {
+      const parsed = JSON.parse(rawJson);
+      setRawJson(JSON.stringify(parsed, null, 2));
+      setJsonError(null);
+    } catch (e) {
+      setJsonError(e instanceof Error ? e.message : "JSON tidak valid");
+    }
+  };
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-4">
+    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-gray-800">
@@ -107,29 +126,38 @@ export default function SectionEditor({ section, templateId, onSave }: Props) {
         </div>
       </div>
 
-      <div>
-        <div className="flex items-center justify-between mb-1">
-          <label className="block text-sm font-medium text-gray-700">
-            Content (JSON)
-          </label>
-          <button
-            type="button"
-            onClick={handleFormat}
-            className="text-xs text-emerald-700 hover:underline"
-          >
-            Format JSON
-          </button>
+      {formDef ? (
+        <formDef.Form value={content as never} onChange={(next: unknown) => setContent(next)} />
+      ) : (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Content (JSON) — section custom
+            </label>
+            <button
+              type="button"
+              onClick={handleFormatRaw}
+              className="text-xs text-emerald-700 hover:underline"
+            >
+              Format JSON
+            </button>
+          </div>
+          <textarea
+            value={rawJson}
+            onChange={(e) => setRawJson(e.target.value)}
+            rows={14}
+            className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs font-mono focus:ring focus:ring-green-200 outline-none"
+          />
+          {jsonError && (
+            <p className="mt-1 text-xs text-red-600">JSON tidak valid: {jsonError}</p>
+          )}
+          <p className="mt-2 text-[11px] text-gray-400">
+            Tidak ada form khusus untuk <code>{section.section_key}</code>. Edit raw JSON.
+          </p>
         </div>
-        <textarea
-          value={contentText}
-          onChange={(e) => setContentText(e.target.value)}
-          rows={14}
-          className="w-full border border-gray-300 rounded-md px-3 py-2 text-xs font-mono focus:ring focus:ring-green-200 outline-none"
-        />
-        {jsonError && <p className="mt-1 text-xs text-red-600">JSON tidak valid: {jsonError}</p>}
-      </div>
+      )}
 
-      <div className="flex items-center justify-end gap-3">
+      <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
         {saved && <span className="text-sm text-emerald-700">Tersimpan ✓</span>}
         <button
           type="button"
