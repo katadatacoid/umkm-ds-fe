@@ -103,6 +103,8 @@ export interface UserProfile {
     phone: string;
     email: string;
     status: string;
+    template_id?: number | null;
+    domain_name?: string | null;
   } | null;
 }
 
@@ -978,11 +980,13 @@ export interface UserProfile {
   umkm: {
     id: string;
     namaUsaha: string;
-    description: string | null; 
+    description: string | null;
     logo_img: string | null;
     phone: string;
     email: string;
     status: string;
+    template_id?: number | null;
+    domain_name?: string | null;
   } | null;
 }
 

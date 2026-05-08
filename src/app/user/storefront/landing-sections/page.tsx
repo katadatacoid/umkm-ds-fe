@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import DashboardUserLayout from "@/app/ui/layout/ds-user-layout";
 import HeadSummary from "@/app/ui/headers/header-summary";
 import SectionEditor from "./section-editor";
+import { userAPI, resolveUserProductId } from "@/lib/api";
 import {
   initLandingSectionsTemplateId,
   useLandingSectionsStore,
@@ -20,21 +21,50 @@ const KNOWN_SECTION_KEYS = [
   "footer",
 ];
 
+const FE_WEB_BASE = (process.env.NEXT_PUBLIC_FE_WEB || "https://demo.rumahdigitalku.id").replace(
+  /\/+$/,
+  ""
+);
+
 const LandingSectionsPage: React.FC = () => {
   const { sections, templateId, loading, error, fetchAll, upsert, setTemplateId } =
     useLandingSectionsStore();
   const [activeKey, setActiveKey] = useState<string | null>(null);
-  const [templateInput, setTemplateInput] = useState<string>(String(templateId));
   const [creatingKey, setCreatingKey] = useState<string>("");
+  const [userProductId, setUserProductId] = useState<string | null>(null);
 
   useEffect(() => {
     initLandingSectionsTemplateId();
-    fetchAll();
-  }, [fetchAll]);
+    let cancelled = false;
+    (async () => {
+      try {
+        const [profileRes, upid] = await Promise.all([
+          userAPI.getMe().catch(() => null),
+          resolveUserProductId().catch(() => null),
+        ]);
+        if (cancelled) return;
+        const tid = profileRes?.data?.umkm?.template_id;
+        if (tid && tid !== templateId) setTemplateId(tid);
+        setUserProductId(upid ?? null);
+      } finally {
+        if (!cancelled) fetchAll();
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
-  useEffect(() => {
-    setTemplateInput(String(templateId));
-  }, [templateId]);
+  const previewUrl = userProductId ? `${FE_WEB_BASE}/web/${userProductId}` : null;
+
+  const handlePreview = () => {
+    if (!previewUrl) {
+      alert("user_product_id belum tersedia. Pastikan akun memiliki UMKM aktif.");
+      return;
+    }
+    window.open(previewUrl, "_blank", "noopener,noreferrer");
+  };
 
   const sortedSections = useMemo(
     () => [...sections].sort((a, b) => a.sort_order - b.sort_order || Number(a.id) - Number(b.id)),
@@ -45,16 +75,6 @@ const LandingSectionsPage: React.FC = () => {
     () => sortedSections.find((s) => s.section_key === activeKey) || sortedSections[0] || null,
     [sortedSections, activeKey]
   );
-
-  const handleApplyTemplateId = () => {
-    const n = Number(templateInput);
-    if (!Number.isFinite(n) || n <= 0) {
-      alert("Template ID harus angka positif");
-      return;
-    }
-    setTemplateId(n);
-    fetchAll();
-  };
 
   const handleCreateSection = async () => {
     const key = creatingKey.trim().toLowerCase().replace(/\s+/g, "_");
@@ -83,20 +103,23 @@ const LandingSectionsPage: React.FC = () => {
         <HeadSummary title="Landing Page" updatedAt="Baru saja" mode="search" />
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 flex flex-wrap items-end gap-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Template ID</label>
-            <input
-              type="number"
-              value={templateInput}
-              onChange={(e) => setTemplateInput(e.target.value)}
-              className="border border-gray-300 rounded-md px-3 py-2 text-sm w-32 focus:ring focus:ring-green-200 outline-none"
-            />
-          </div>
           <button
-            onClick={handleApplyTemplateId}
-            className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition"
+            onClick={handlePreview}
+            disabled={!previewUrl}
+            title={previewUrl ?? "user_product_id belum tersedia"}
+            className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition disabled:bg-gray-400 inline-flex items-center gap-2"
           >
-            Muat Template
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-4 h-4"
+              aria-hidden="true"
+            >
+              <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
+              <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
+            </svg>
+            Preview
           </button>
           <div className="ml-auto flex items-end gap-2">
             <div>
