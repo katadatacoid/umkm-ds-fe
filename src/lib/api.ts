@@ -1565,3 +1565,188 @@ export const blogPostsAPI = {
     return unwrapJson(res, "Gagal menghapus blog post");
   },
 };
+
+// ============================================================
+// Footer CMS API
+// Base path: /storefront/footer
+// ============================================================
+
+export interface FooterBrand {
+  id: string;
+  user_product_id: string;
+  brand_name: string | null;
+  brand_description: string | null;
+  brand_tagline: string | null;
+  brand_logo_url: string | null;
+  copyright_suffix: string | null;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FooterMenuItem {
+  id: string;
+  menu_group_id: string;
+  label: string;
+  href: string;
+  sort_order: number;
+  is_visible: boolean;
+}
+
+export interface FooterMenuGroup {
+  id: string;
+  user_product_id: string;
+  title: string;
+  sort_order: number;
+  is_visible: boolean;
+  items: FooterMenuItem[];
+}
+
+export interface FooterSocial {
+  id: string;
+  user_product_id: string;
+  platform: string;
+  label: string | null;
+  url: string;
+  icon: string | null;
+  sort_order: number;
+  is_visible: boolean;
+}
+
+export interface FooterBundle {
+  footer: FooterBrand | null;
+  menu_groups: FooterMenuGroup[];
+  socials: FooterSocial[];
+}
+
+export type FooterBrandPayload = Partial<{
+  brand_name: string;
+  brand_description: string;
+  brand_tagline: string;
+  brand_logo_url: string;
+  copyright_suffix: string;
+  is_visible: boolean;
+}>;
+
+export type FooterMenuGroupPayload = {
+  title: string;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export type FooterMenuItemPayload = {
+  label: string;
+  href: string;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export type FooterSocialPayload = {
+  platform: string;
+  url: string;
+  label?: string;
+  icon?: string;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export const footerAPI = {
+  async getBundle(params: {
+    user_product_id: string | number;
+    include_hidden?: boolean;
+  }): Promise<ItemResponse<FooterBundle>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat footer");
+  },
+
+  async upsertBrand(body: FooterBrandPayload): Promise<ItemResponse<FooterBrand>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menyimpan footer");
+  },
+
+  async createMenuGroup(body: FooterMenuGroupPayload): Promise<ItemResponse<FooterMenuGroup>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-groups`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat menu group");
+  },
+
+  async updateMenuGroup(
+    id: string | number,
+    body: Partial<FooterMenuGroupPayload>
+  ): Promise<ItemResponse<FooterMenuGroup>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-groups/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui menu group");
+  },
+
+  async removeMenuGroup(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-groups/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus menu group");
+  },
+
+  async createMenuItem(
+    groupId: string | number,
+    body: FooterMenuItemPayload
+  ): Promise<ItemResponse<FooterMenuItem>> {
+    const res = await authenticatedFetch(
+      `${API_URL}/storefront/footer/menu-groups/${groupId}/items`,
+      { method: "POST", body: JSON.stringify(body) }
+    );
+    return unwrapJson(res, "Gagal membuat menu item");
+  },
+
+  async updateMenuItem(
+    id: string | number,
+    body: Partial<FooterMenuItemPayload>
+  ): Promise<ItemResponse<FooterMenuItem>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-items/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui menu item");
+  },
+
+  async removeMenuItem(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-items/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus menu item");
+  },
+
+  async createSocial(body: FooterSocialPayload): Promise<ItemResponse<FooterSocial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/socials`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat social link");
+  },
+
+  async updateSocial(
+    id: string | number,
+    body: Partial<FooterSocialPayload>
+  ): Promise<ItemResponse<FooterSocial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/socials/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui social link");
+  },
+
+  async removeSocial(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/socials/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus social link");
+  },
+};

@@ -18,8 +18,9 @@ const KNOWN_SECTION_KEYS = [
   "why_choose_us",
   "explore_products",
   "blog_insights",
-  "footer",
 ];
+
+const HIDDEN_SECTION_KEYS = new Set(["footer"]);
 
 const FE_WEB_BASE = (process.env.NEXT_PUBLIC_FE_WEB || "https://demo.rumahdigitalku.id").replace(
   /\/+$/,
@@ -67,7 +68,10 @@ const LandingSectionsPage: React.FC = () => {
   };
 
   const sortedSections = useMemo(
-    () => [...sections].sort((a, b) => a.sort_order - b.sort_order || Number(a.id) - Number(b.id)),
+    () =>
+      [...sections]
+        .filter((s) => !HIDDEN_SECTION_KEYS.has(s.section_key))
+        .sort((a, b) => a.sort_order - b.sort_order || Number(a.id) - Number(b.id)),
     [sections]
   );
 
@@ -79,6 +83,10 @@ const LandingSectionsPage: React.FC = () => {
   const handleCreateSection = async () => {
     const key = creatingKey.trim().toLowerCase().replace(/\s+/g, "_");
     if (!key) return;
+    if (HIDDEN_SECTION_KEYS.has(key)) {
+      alert(`Section "${key}" dikelola di menu Footer.`);
+      return;
+    }
     if (sortedSections.some((s) => s.section_key === key)) {
       alert(`Section "${key}" sudah ada.`);
       return;

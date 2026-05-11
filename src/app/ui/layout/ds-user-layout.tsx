@@ -16,6 +16,7 @@ import {
   faCircleQuestion,
   faComments,
   faNewspaper,
+  faWindowMinimize,
 } from "@fortawesome/free-solid-svg-icons";
 import { usePathname } from "next/navigation";
 import useStore from "@/stores/use-store";
@@ -90,6 +91,12 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       href: `/${path}/storefront/blog-posts`,
       icon: faNewspaper,
       label: "Blog Post",
+      hasDivider: false,
+    },
+    {
+      href: `/${path}/storefront/footer`,
+      icon: faWindowMinimize,
+      label: "Footer",
       hasDivider: true,
     },
     { href: `/${path}/affiliate`, icon: faShareAlt, label: "Affiliate", hasDivider: false },
