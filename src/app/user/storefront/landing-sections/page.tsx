@@ -6,7 +6,7 @@ import HeadSummary from "@/app/ui/headers/header-summary";
 import SectionEditorV2 from "./v2/section-editor-v2";
 import KeyUnggulanList from "./v2/key-unggulan-list";
 import { userAPI, resolveUserProductId, type LandingSingletonKind } from "@/lib/api";
-import { initLandingTemplateId, useLandingStore } from "@/stores/use-landing-store";
+import { useLandingStore } from "@/stores/use-landing-store";
 
 const SINGLETON_KINDS: { kind: LandingSingletonKind; label: string }[] = [
   { kind: "hero", label: "Hero" },
@@ -44,21 +44,26 @@ const LandingSectionsPage: React.FC = () => {
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
-    initLandingTemplateId();
     let cancelled = false;
     (async () => {
-      try {
-        const [profileRes, upid] = await Promise.all([
-          userAPI.getMe().catch(() => null),
-          resolveUserProductId().catch(() => null),
-        ]);
-        if (cancelled) return;
-        const tid = profileRes?.data?.umkm?.template_id;
-        if (tid && tid !== templateId) setTemplateId(tid);
-        setUserProductId(upid ?? null);
-      } finally {
-        if (!cancelled) refresh();
-      }
+      const [profileRes, upid] = await Promise.all([
+        userAPI.getMe().catch((e) => {
+          console.error("[landing] getMe error:", e);
+          return null;
+        }),
+        resolveUserProductId().catch((e) => {
+          console.error("[landing] resolveUserProductId error:", e);
+          return null;
+        }),
+      ]);
+      if (cancelled) return;
+      console.log("[landing] getMe response:", profileRes);
+      console.log("[landing] resolveUserProductId:", upid);
+      const tid = profileRes?.data?.umkm?.template_id;
+      console.log("[landing] template_id from profile:", tid);
+      if (tid) setTemplateId(tid);
+      setUserProductId(upid ?? null);
+      if (!cancelled) refresh();
     })();
     return () => {
       cancelled = true;

@@ -8,9 +8,6 @@ import {
   type LandingSingletonKind,
 } from "@/lib/api";
 
-const TEMPLATE_ID_LS_KEY = "storefront_template_id";
-const DEFAULT_TEMPLATE_ID = 4;
-
 const EMPTY: LandingAggregateData = {
   hero: null,
   cta: null,
@@ -18,19 +15,6 @@ const EMPTY: LandingAggregateData = {
   cta_filosofi: null,
   key_unggulan: [],
 };
-
-function readSavedTemplateId(): number {
-  if (typeof window === "undefined") return DEFAULT_TEMPLATE_ID;
-  const v = window.localStorage.getItem(TEMPLATE_ID_LS_KEY);
-  const n = v ? Number(v) : NaN;
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_TEMPLATE_ID;
-}
-
-function persistTemplateId(id: number) {
-  if (typeof window !== "undefined") {
-    window.localStorage.setItem(TEMPLATE_ID_LS_KEY, String(id));
-  }
-}
 
 interface LandingStoreState {
   data: LandingAggregateData;
@@ -52,21 +36,21 @@ interface LandingStoreState {
 
 export const useLandingStore = create<LandingStoreState>((set, get) => ({
   data: EMPTY,
-  templateId: DEFAULT_TEMPLATE_ID,
+  templateId: 0,
   loading: false,
   error: null,
 
-  setTemplateId: (id) => {
-    persistTemplateId(id);
-    set({ templateId: id });
-  },
+  setTemplateId: (id) => set({ templateId: id }),
 
   refresh: async () => {
+    const tid = get().templateId;
+    if (!tid) {
+      set({ error: "template_id belum tersedia" });
+      return;
+    }
     set({ loading: true, error: null });
     try {
       const upid = await resolveUserProductId();
-      const tid = get().templateId || readSavedTemplateId();
-      if (get().templateId !== tid) set({ templateId: tid });
       const res = await landingV2API.getAggregate({
         user_product_id: upid,
         template_id: tid,
@@ -142,8 +126,3 @@ export const useLandingStore = create<LandingStoreState>((set, get) => ({
   },
 }));
 
-export function initLandingTemplateId() {
-  if (typeof window !== "undefined") {
-    useLandingStore.setState({ templateId: readSavedTemplateId() });
-  }
-}
