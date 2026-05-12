@@ -1754,3 +1754,114 @@ export const footerAPI = {
     return unwrapJson(res, "Gagal menghapus social link");
   },
 };
+
+// ============================================================
+// Landing v2 (normalized) — /storefront/landing
+// ============================================================
+
+export type LandingSingletonKind = "hero" | "cta" | "cta_product" | "cta_filosofi";
+export type LandingKind = LandingSingletonKind | "key_unggulan_item";
+
+export interface LandingSectionImage {
+  id: string;
+  image_url: string;
+  alt_text: string | null;
+  sort_order: number;
+}
+
+export interface LandingSectionV2 {
+  id: string;
+  judul: string | null;
+  tagline: string | null;
+  deskripsi: string | null;
+  image_url: string | null;
+  background_url: string | null;
+  sort_order: number;
+  is_visible: boolean;
+  images: LandingSectionImage[];
+}
+
+export interface LandingAggregateData {
+  hero: LandingSectionV2 | null;
+  cta: LandingSectionV2 | null;
+  cta_product: LandingSectionV2 | null;
+  cta_filosofi: LandingSectionV2 | null;
+  key_unggulan: LandingSectionV2[];
+}
+
+export type LandingSectionInput = Partial<{
+  judul: string | null;
+  tagline: string | null;
+  deskripsi: string | null;
+  image_url: string | null;
+  background_url: string | null;
+  sort_order: number;
+  is_visible: boolean;
+  images: { image_url: string; alt_text?: string | null; sort_order?: number }[];
+}>;
+
+export const landingV2API = {
+  async getAggregate(params: {
+    user_product_id: string | number;
+    template_id: number;
+    include_hidden?: boolean;
+  }): Promise<ItemResponse<LandingAggregateData>> {
+    const qs = new URLSearchParams({
+      user_product_id: String(params.user_product_id),
+      template_id: String(params.template_id),
+    });
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/landing?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat landing");
+  },
+
+  async upsertSingleton(
+    kind: LandingSingletonKind,
+    body: { template_id: number } & LandingSectionInput
+  ): Promise<ItemResponse<LandingSectionV2>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/${kind}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menyimpan section");
+  },
+
+  async createKeyUnggulan(
+    body: { template_id: number } & LandingSectionInput
+  ): Promise<ItemResponse<LandingSectionV2>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/key-unggulan`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat item");
+  },
+
+  async updateKeyUnggulan(
+    id: string | number,
+    body: LandingSectionInput
+  ): Promise<ItemResponse<LandingSectionV2>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/key-unggulan/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui item");
+  },
+
+  async removeKeyUnggulan(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/key-unggulan/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus item");
+  },
+
+  async reorderKeyUnggulan(body: {
+    template_id: number;
+    order: { id: string; sort_order: number }[];
+  }): Promise<{ success: true; message?: string }> {
+    const res = await authenticatedFetch(
+      `${API_URL}/storefront/landing/key-unggulan/reorder`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    );
+    return unwrapJson(res, "Gagal reorder");
+  },
+};
