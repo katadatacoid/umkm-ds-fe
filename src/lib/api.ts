@@ -105,6 +105,7 @@ export interface UserProfile {
     status: string;
     template_id?: number | null;
     domain_name?: string | null;
+    jamOperasional?: string | null;
   } | null;
 }
 
@@ -987,6 +988,7 @@ export interface UserProfile {
     status: string;
     template_id?: number | null;
     domain_name?: string | null;
+    jamOperasional?: string | null;
   } | null;
 }
 
@@ -1020,6 +1022,7 @@ export const userAPI = {
     namaUsaha: string;
     description?: string;
     noTelpon: string;
+    jamOperasional?: string;
     logo?: File;
     passwordLama?: string;
     passwordBaru?: string;
@@ -1031,6 +1034,7 @@ export const userAPI = {
     formData.append("namaUsaha", data.namaUsaha);
     if (data.description !== undefined) formData.append("description", data.description);
     formData.append("noTelpon", data.noTelpon);
+    if (data.jamOperasional !== undefined) formData.append("jamOperasional", data.jamOperasional);
     if (data.logo) formData.append("logo", data.logo);
 
     // Hanya append jika ada isinya
