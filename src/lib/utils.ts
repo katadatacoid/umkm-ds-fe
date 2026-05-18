@@ -24,14 +24,33 @@ export function decodeObjectFields<T extends Record<string, any>>(
   fields: (keyof T)[]
 ): T {
   const decoded = { ...obj };
-  
+
   fields.forEach(field => {
     if (typeof decoded[field] === 'string') {
       decoded[field] = decodeHtmlEntities(decoded[field] as string) as T[keyof T];
     }
   });
-  
+
   return decoded;
+}
+
+/**
+ * Decode rekursif semua string field di object/array (untuk payload dari BE
+ * yang ter-encode HTML entity, mis. URL jadi `https:&#x2F;&#x2F;…`).
+ */
+export function decodeStringFieldsDeep<T>(input: T): T {
+  if (Array.isArray(input)) {
+    return input.map((v) => decodeStringFieldsDeep(v)) as unknown as T;
+  }
+  if (input && typeof input === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
+      out[k] = decodeStringFieldsDeep(v);
+    }
+    return out as T;
+  }
+  if (typeof input === "string") return decodeHtmlEntities(input) as unknown as T;
+  return input;
 }
 
 // ============================================================================

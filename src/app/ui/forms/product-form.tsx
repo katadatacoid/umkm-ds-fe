@@ -1,8 +1,13 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import Image from "next/image";
-import { Product, useUserProductsStore } from "@/stores/use-user-products-store";
+import {
+  ECOMMERCE_PLATFORMS,
+  EcommerceLinkKey,
+  Product,
+  useUserProductsStore,
+} from "@/stores/use-user-products-store";
 import { useRouter } from "next/navigation";
 import SuccessModal from "@/app/ui/modal/SuccessModal";
 import ImageCropModal from "@/app/ui/modal/ImageCropModal";
@@ -13,45 +18,84 @@ interface ProductFormProps {
   redirectTo?: string;
 }
 
+interface LinkRow {
+  id: number;
+  platform: EcommerceLinkKey | "";
+  url: string;
+}
+
+const buildInitialLinks = (product?: Product): LinkRow[] => {
+  if (!product) return [];
+  let counter = 0;
+  return ECOMMERCE_PLATFORMS.flatMap(({ key }) => {
+    const url = product[key];
+    if (!url) return [];
+    counter += 1;
+    return [{ id: counter, platform: key, url }];
+  });
+};
+
 const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) => {
   const router = useRouter();
-  const addProduct = useUserProductsStore((s) => s.addProduct);
-  const updateProduct = useUserProductsStore((s) => s.updateProduct);
 
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // ✅ State crop
   const [cropSrc, setCropSrc] = useState<string | null>(null);
-  const [cropFileName, setCropFileName] = useState<string>('product.jpg');
+  const [cropFileName, setCropFileName] = useState<string>("product.jpg");
+
+  const initialLinks = useMemo(() => buildInitialLinks(product), [product]);
+  const baselinePlatforms = useMemo(
+    () => new Set(initialLinks.map((row) => row.platform as EcommerceLinkKey)),
+    [initialLinks],
+  );
 
   const [formData, setFormData] = useState({
     namaProduk: product?.name || "",
     hargaProduk: product?.price?.toString() || "",
-    linkTokopedia: product?.linkTokopedia || "",
-    linkShopee: product?.linkShopee || "",
-    linkLazada: product?.linkLazada || "",
-    linkBukalapak: product?.linkBukalapak || "",
-    linkLainnya: product?.linkLainnya || "",
     deskripsi: product?.description || "",
     image: (product?.image as File | string | null) || null,
     status: product?.status || "non-aktif",
   });
+  const [linkRows, setLinkRows] = useState<LinkRow[]>(initialLinks);
+  const linkRowIdRef = React.useRef<number>(initialLinks.length);
+
+  const usedPlatforms = useMemo(
+    () => new Set(linkRows.map((row) => row.platform).filter(Boolean) as EcommerceLinkKey[]),
+    [linkRows],
+  );
+  const hasAvailablePlatform = usedPlatforms.size < ECOMMERCE_PLATFORMS.length;
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // ✅ Saat user pilih file → buka crop modal dulu
+  const handleAddLinkRow = () => {
+    linkRowIdRef.current += 1;
+    setLinkRows((prev) => [...prev, { id: linkRowIdRef.current, platform: "", url: "" }]);
+  };
+
+  const handleLinkPlatformChange = (rowId: number, platform: EcommerceLinkKey | "") => {
+    setLinkRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, platform } : row)));
+  };
+
+  const handleLinkUrlChange = (rowId: number, url: string) => {
+    setLinkRows((prev) => prev.map((row) => (row.id === rowId ? { ...row, url } : row)));
+  };
+
+  const handleRemoveLinkRow = (rowId: number) => {
+    setLinkRows((prev) => prev.filter((row) => row.id !== rowId));
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] || null;
     if (!file) return;
 
-    if (!file.type.startsWith('image/')) {
-      alert('File harus berupa gambar');
+    if (!file.type.startsWith("image/")) {
+      alert("File harus berupa gambar");
       return;
     }
 
@@ -60,14 +104,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
     reader.onloadend = () => setCropSrc(reader.result as string);
     reader.readAsDataURL(file);
 
-    // Reset input agar bisa pilih file sama lagi
-    e.target.value = '';
+    e.target.value = "";
   };
 
-  // ✅ Setelah crop selesai → simpan ke formData
   const handleCropComplete = (croppedFile: File) => {
     if (croppedFile.size > 1 * 1024 * 1024) {
-      alert('Ukuran foto setelah crop melebihi 1MB, coba gunakan gambar yang lebih kecil');
+      alert("Ukuran foto setelah crop melebihi 1MB, coba gunakan gambar yang lebih kecil");
       setCropSrc(null);
       return;
     }
@@ -82,9 +124,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
   const getImagePreviewUrl = () => {
     if (!formData.image) return null;
     if (formData.image instanceof File) return URL.createObjectURL(formData.image);
-    if (typeof formData.image === 'string') {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      return formData.image.startsWith('http') ? formData.image : `${API_URL}${formData.image}`;
+    if (typeof formData.image === "string") {
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      return formData.image.startsWith("http") ? formData.image : `${API_URL}${formData.image}`;
     }
     return null;
   };
@@ -93,53 +135,86 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
     e.preventDefault();
 
     if (!formData.namaProduk.trim()) {
-      alert('Nama produk wajib diisi');
+      alert("Nama produk wajib diisi");
       return;
     }
     if (!formData.hargaProduk || parseFloat(formData.hargaProduk) <= 0) {
-      alert('Harga produk harus lebih dari 0');
+      alert("Harga produk harus lebih dari 0");
       return;
     }
     if (!formData.status) {
-      alert('Status produk wajib dipilih');
+      alert("Status produk wajib dipilih");
       return;
+    }
+
+    const seenPlatforms = new Set<EcommerceLinkKey>();
+    for (const row of linkRows) {
+      if (!row.platform) {
+        alert("Pilih platform untuk setiap baris link, atau hapus baris yang kosong.");
+        return;
+      }
+      if (seenPlatforms.has(row.platform)) {
+        const label = ECOMMERCE_PLATFORMS.find((p) => p.key === row.platform)?.label;
+        alert(`Link untuk platform "${label}" sudah ditambahkan. Hapus duplikat terlebih dahulu.`);
+        return;
+      }
+      seenPlatforms.add(row.platform);
     }
 
     setIsSubmitting(true);
 
     try {
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000';
-      const token = localStorage.getItem('access_token');
-      if (!token) throw new Error('Anda belum login');
+      const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+      const token = localStorage.getItem("access_token");
+      if (!token) throw new Error("Anda belum login");
 
       const submitData = new FormData();
-      submitData.append('name', formData.namaProduk);
-      submitData.append('price', formData.hargaProduk);
-      submitData.append('description', formData.deskripsi);
-      const backendStatus = formData.status === 'aktif' ? 'published' : 'draft';
-      submitData.append('status', backendStatus);
+      submitData.append("name", formData.namaProduk);
+      submitData.append("price", formData.hargaProduk);
+      submitData.append("description", formData.deskripsi);
+      const backendStatus = formData.status === "aktif" ? "published" : "draft";
+      submitData.append("status", backendStatus);
 
-      if (formData.linkTokopedia) submitData.append('linkTokopedia', formData.linkTokopedia);
-      if (formData.linkShopee) submitData.append('linkShopee', formData.linkShopee);
-      if (formData.linkLazada) submitData.append('linkLazada', formData.linkLazada);
-      if (formData.linkBukalapak) submitData.append('linkBukalapak', formData.linkBukalapak);
-      if (formData.linkLainnya) submitData.append('linkLainnya', formData.linkLainnya);
-      if (formData.image instanceof File) submitData.append('image', formData.image);
+      const filledPlatforms = new Set<EcommerceLinkKey>();
+      for (const row of linkRows) {
+        if (!row.platform) continue;
+        const trimmedUrl = row.url.trim();
+        if (trimmedUrl) {
+          submitData.append(row.platform, trimmedUrl);
+          filledPlatforms.add(row.platform);
+        } else if (mode === "edit" && baselinePlatforms.has(row.platform)) {
+          // Field link sengaja dikosongkan oleh user → kirim "" agar BE hapus key tsb.
+          submitData.append(row.platform, "");
+          filledPlatforms.add(row.platform);
+        }
+      }
 
-      const url = mode === 'add'
-        ? `${API_URL}/user/products`
-        : `${API_URL}/user/products/${product?.id}`;
-      const method = mode === 'add' ? 'POST' : 'PUT';
+      if (mode === "edit") {
+        // Link yang sebelumnya ada tapi barisnya dihapus user → kirim "" untuk hapus key di BE.
+        for (const platform of baselinePlatforms) {
+          if (!filledPlatforms.has(platform)) {
+            submitData.append(platform, "");
+          }
+        }
+      }
+
+      if (formData.image instanceof File) submitData.append("image", formData.image);
+
+      const url =
+        mode === "add"
+          ? `${API_URL}/user/products`
+          : `${API_URL}/user/products/${product?.id}`;
+      const method = mode === "add" ? "POST" : "PUT";
 
       const response = await fetch(url, {
         method,
-        headers: { 'Authorization': `Bearer ${token}` },
+        headers: { Authorization: `Bearer ${token}` },
         body: submitData,
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Gagal menyimpan produk');
+        throw new Error(errorData.message || "Gagal menyimpan produk");
       }
 
       const { fetchProductsData } = useUserProductsStore.getState();
@@ -147,8 +222,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
 
       setShowSuccessModal(true);
     } catch (error) {
-      console.error('Error submitting product:', error);
-      alert(error instanceof Error ? error.message : 'Gagal menyimpan produk');
+      console.error("Error submitting product:", error);
+      alert(error instanceof Error ? error.message : "Gagal menyimpan produk");
     } finally {
       setIsSubmitting(false);
     }
@@ -159,15 +234,21 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
     router.push(redirectTo || "/user/products-management");
   };
 
-  const modalContent = mode === "add"
-    ? { title: "Produk berhasil ditambahkan!", message: "Selamat! Produk baru sudah tercatat dan siap untuk dipasarkan." }
-    : { title: "Perubahan berhasil disimpan!", message: "Produk Anda telah berhasil diperbarui." };
+  const modalContent =
+    mode === "add"
+      ? {
+          title: "Produk berhasil ditambahkan!",
+          message: "Selamat! Produk baru sudah tercatat dan siap untuk dipasarkan.",
+        }
+      : {
+          title: "Perubahan berhasil disimpan!",
+          message: "Produk Anda telah berhasil diperbarui.",
+        };
 
   const imagePreviewUrl = getImagePreviewUrl();
 
   return (
     <>
-      {/* Crop Modal */}
       {cropSrc && (
         <ImageCropModal
           imageSrc={cropSrc}
@@ -179,7 +260,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
 
       <form onSubmit={handleSubmit}>
         <div className="space-y-6 sm:space-y-5">
-
           {/* Nama Produk */}
           <div className="flex flex-col">
             <label htmlFor="namaProduk" className="text-sm font-medium text-gray-700">
@@ -215,29 +295,83 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
             />
           </div>
 
-          {/* Links */}
-          {[
-            { label: "Link Tokopedia", name: "linkTokopedia" },
-            { label: "Link Shopee", name: "linkShopee" },
-            { label: "Link Lazada", name: "linkLazada" },
-            { label: "Link Bukalapak", name: "linkBukalapak" },
-            { label: "Lainnya", name: "linkLainnya" },
-          ].map((field) => (
-            <div key={field.name} className="flex flex-col">
-              <label htmlFor={field.name} className="text-sm font-medium text-gray-700">
-                {field.label}
-              </label>
-              <input
-                type="url"
-                id={field.name}
-                name={field.name}
-                value={formData[field.name as keyof typeof formData] as string}
-                onChange={handleChange}
-                placeholder="https://..."
-                className="mt-2 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
-              />
+          {/* Link E-commerce */}
+          <div className="flex flex-col">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-medium text-gray-700">Link E-commerce</label>
+              <span className="text-xs text-gray-500">
+                {linkRows.length}/{ECOMMERCE_PLATFORMS.length}
+              </span>
             </div>
-          ))}
+
+            {linkRows.length === 0 ? (
+              <p className="mt-2 text-xs text-gray-500">
+                Belum ada link. Tambahkan link toko online produk ini bila tersedia.
+              </p>
+            ) : (
+              <div className="mt-2 space-y-2">
+                {linkRows.map((row) => {
+                  const platformOptions = ECOMMERCE_PLATFORMS.filter(
+                    (p) => p.key === row.platform || !usedPlatforms.has(p.key),
+                  );
+                  return (
+                    <div key={row.id} className="flex flex-col sm:flex-row gap-2">
+                      <select
+                        value={row.platform}
+                        onChange={(e) =>
+                          handleLinkPlatformChange(
+                            row.id,
+                            e.target.value as EcommerceLinkKey | "",
+                          )
+                        }
+                        className="sm:w-44 px-3 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600 bg-white"
+                      >
+                        <option value="" disabled>
+                          Pilih platform
+                        </option>
+                        {platformOptions.map((p) => (
+                          <option key={p.key} value={p.key}>
+                            {p.label}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="url"
+                        value={row.url}
+                        onChange={(e) => handleLinkUrlChange(row.id, e.target.value)}
+                        placeholder="https://..."
+                        className="flex-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveLinkRow(row.id)}
+                        className="px-3 py-2 text-sm text-red-600 border border-red-200 rounded-md hover:bg-red-50 sm:w-auto"
+                        title="Hapus link"
+                      >
+                        Hapus
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="mt-3">
+              <button
+                type="button"
+                onClick={handleAddLinkRow}
+                disabled={!hasAvailablePlatform}
+                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-[#30B280] border border-[#30B280] rounded-md hover:bg-[#30B280] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[#30B280]"
+              >
+                + Tambah Link
+              </button>
+              {!hasAvailablePlatform && (
+                <p className="mt-2 text-xs text-gray-500">
+                  Semua platform sudah ditambahkan.
+                </p>
+              )}
+            </div>
+          </div>
 
           {/* Deskripsi */}
           <div className="flex flex-col">
@@ -286,7 +420,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
                   <div className="flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-3">
                     <label className="cursor-pointer w-full sm:w-auto text-center sm:text-left">
                       <span className="inline-block w-full sm:w-auto px-6 py-2 text-sm font-medium text-[#30B280] border border-[#30B280] rounded-md hover:bg-[#30B280] hover:text-white transition-colors">
-                        {formData.image ? 'Ganti Foto' : 'Pilih Foto'}
+                        {formData.image ? "Ganti Foto" : "Pilih Foto"}
                       </span>
                       <input
                         type="file"
@@ -299,7 +433,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
                     {formData.image && (
                       <div className="flex items-center gap-2 text-sm text-gray-600">
                         <span className="truncate max-w-[150px] sm:max-w-[200px]">
-                          {formData.image instanceof File ? formData.image.name : 'Gambar saat ini'}
+                          {formData.image instanceof File ? formData.image.name : "Gambar saat ini"}
                         </span>
                         <button
                           type="button"
@@ -330,7 +464,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
               className="mt-2 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
               required
             >
-              <option value="" disabled>Pilih status</option>
+              <option value="" disabled>
+                Pilih status
+              </option>
               <option value="aktif">Aktif</option>
               <option value="non-aktif">Nonaktif</option>
             </select>
@@ -352,7 +488,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ mode, product, redirectTo }) 
             disabled={isSubmitting}
             className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-green-400 disabled:cursor-not-allowed"
           >
-            {isSubmitting ? 'Menyimpan...' : mode === "add" ? "Tambah Produk" : "Simpan Perubahan"}
+            {isSubmitting ? "Menyimpan..." : mode === "add" ? "Tambah Produk" : "Simpan Perubahan"}
           </button>
         </div>
 

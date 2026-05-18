@@ -10,6 +10,7 @@ import {
   FooterMenuItemPayload,
   FooterSocialPayload,
 } from "@/lib/api";
+import { decodeStringFieldsDeep } from "@/lib/utils";
 
 interface FooterState {
   brand: FooterBrand | null;
@@ -62,9 +63,9 @@ export const useFooterStore = create<FooterState>((set, get) => ({
         include_hidden: true,
       });
       set({
-        brand: res.data.footer,
-        menuGroups: res.data.menu_groups || [],
-        socials: res.data.socials || [],
+        brand: res.data.footer ? decodeStringFieldsDeep(res.data.footer) : null,
+        menuGroups: decodeStringFieldsDeep(res.data.menu_groups || []),
+        socials: decodeStringFieldsDeep(res.data.socials || []),
         loading: false,
       });
     } catch (e) {
@@ -79,7 +80,7 @@ export const useFooterStore = create<FooterState>((set, get) => ({
     set({ error: null });
     try {
       const res = await footerAPI.upsertBrand(body);
-      set({ brand: res.data });
+      set({ brand: decodeStringFieldsDeep(res.data) });
     } catch (e) {
       set({ error: e instanceof Error ? e.message : "Gagal menyimpan brand" });
       throw e;

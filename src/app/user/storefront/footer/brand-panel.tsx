@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { useFooterStore } from "@/stores/use-footer-store";
+import ImageUploadField from "@/app/ui/file-upload/image-upload-field";
 
 const BrandPanel: React.FC = () => {
   const { brand, saveBrand } = useFooterStore();
@@ -72,8 +73,14 @@ const BrandPanel: React.FC = () => {
         </label>
       </div>
 
+      <ImageUploadField
+        label="Logo Brand"
+        value={form.brand_logo_url}
+        onChange={(url) => setForm((prev) => ({ ...prev, brand_logo_url: url }))}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
+        <div className="md:col-span-2">
           <label className="block text-sm font-medium text-gray-700 mb-1">
             Nama Brand
           </label>
@@ -82,19 +89,6 @@ const BrandPanel: React.FC = () => {
             value={form.brand_name}
             onChange={handleChange("brand_name")}
             placeholder="Vogue22"
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring focus:ring-green-200 outline-none"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            URL Logo
-          </label>
-          <input
-            type="text"
-            value={form.brand_logo_url}
-            onChange={handleChange("brand_logo_url")}
-            placeholder="https://..."
             className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring focus:ring-green-200 outline-none"
           />
         </div>

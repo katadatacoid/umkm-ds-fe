@@ -1,18 +1,17 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import DashboardUserLayout from "@/app/ui/layout/ds-user-layout";
 import StatsSection from "@/app/ui/section/seaction-stat";
 import HeadSummary from "@/app/ui/headers/header-summary";
 import TableBlogPosts from "./table-blog-posts";
-import BlogFormModal from "./blog-form-modal";
 import { useBlogPostsStore } from "@/stores/use-blog-posts-store";
 import { BlogPost, BlogStatus } from "@/lib/api";
 
 const BlogPostsPage: React.FC = () => {
-  const { statsData, fetchAll, create, update } = useBlogPostsStore();
-  const [editing, setEditing] = useState<BlogPost | null>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const router = useRouter();
+  const { statsData, fetchAll } = useBlogPostsStore();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<BlogStatus | "all">("all");
@@ -35,34 +34,11 @@ const BlogPostsPage: React.FC = () => {
   };
 
   const handleAdd = () => {
-    setEditing(null);
-    setModalOpen(true);
+    router.push("/user/storefront/blog-posts/new");
   };
 
   const handleEdit = (row: BlogPost) => {
-    setEditing(row);
-    setModalOpen(true);
-  };
-
-  const handleSubmit = async (data: {
-    slug: string;
-    title: string;
-    body: string;
-    category: string;
-    excerpt: string;
-    cover_image_url: string;
-    read_minutes: number | null;
-    status: BlogStatus;
-    is_featured: boolean;
-  }) => {
-    const payload = {
-      ...data,
-      category: data.category || null,
-      excerpt: data.excerpt || null,
-      cover_image_url: data.cover_image_url || null,
-    };
-    if (editing) await update(editing.id, payload);
-    else await create(payload);
+    router.push(`/user/storefront/blog-posts/${row.id}/edit`);
   };
 
   return (
@@ -87,7 +63,7 @@ const BlogPostsPage: React.FC = () => {
               placeholder="Cari judul / kategori..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => {
+              onKeyDown={(e) => {
                 if (e.key === "Enter") applyFilters();
               }}
               className="border border-gray-300 rounded-md px-3 py-2 w-64 text-sm focus:ring focus:ring-green-200 outline-none"
@@ -120,16 +96,6 @@ const BlogPostsPage: React.FC = () => {
 
           <TableBlogPosts onEdit={handleEdit} />
         </div>
-
-        <BlogFormModal
-          open={modalOpen}
-          initial={editing}
-          onClose={() => {
-            setModalOpen(false);
-            setEditing(null);
-          }}
-          onSubmit={handleSubmit}
-        />
       </div>
     </DashboardUserLayout>
   );

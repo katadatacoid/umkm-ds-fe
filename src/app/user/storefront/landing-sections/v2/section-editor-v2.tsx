@@ -13,6 +13,7 @@ import {
   labelCls,
   cardCls,
 } from "../forms/shared";
+import ImageUploadField from "@/app/ui/file-upload/image-upload-field";
 
 type FieldSet = {
   judul: boolean;
@@ -194,23 +195,19 @@ export default function SectionEditorV2({ kind, section, onSave, onDelete }: Pro
         <TextAreaField label="Deskripsi" value={deskripsi} onChange={setDeskripsi} rows={4} />
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {fields.image_url && (
-          <TextField
-            label="Image URL"
-            type="url"
+          <ImageUploadField
+            label="Image"
             value={imageUrl}
             onChange={setImageUrl}
-            placeholder="https://…"
           />
         )}
         {fields.background_url && (
-          <TextField
-            label="Background URL"
-            type="url"
+          <ImageUploadField
+            label="Background"
             value={backgroundUrl}
             onChange={setBackgroundUrl}
-            placeholder="https://…"
           />
         )}
       </div>
@@ -263,16 +260,11 @@ export default function SectionEditorV2({ kind, section, onSave, onDelete }: Pro
                     </button>
                   </div>
                 </div>
-                <div>
-                  <label className={labelCls}>Image URL</label>
-                  <input
-                    type="url"
-                    value={img.image_url}
-                    onChange={(e) => updateImage(i, { image_url: e.target.value })}
-                    placeholder="https://…"
-                    className={inputCls}
-                  />
-                </div>
+                <ImageUploadField
+                  label="Gambar"
+                  value={img.image_url}
+                  onChange={(url) => updateImage(i, { image_url: url })}
+                />
                 <div>
                   <label className={labelCls}>Alt Text</label>
                   <input

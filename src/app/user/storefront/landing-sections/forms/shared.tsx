@@ -2,30 +2,17 @@
 
 import React from "react";
 
-// Decode entitas HTML yang sering ada di payload (mis. &#x2F; → /).
-export function decodeEntities(value: unknown): string {
-  if (typeof value !== "string") return value === null || value === undefined ? "" : String(value);
-  if (!/&[a-zA-Z0-9#]+;/.test(value)) return value;
-  if (typeof document === "undefined") return value;
-  const ta = document.createElement("textarea");
-  ta.innerHTML = value;
-  return ta.value;
-}
+import { decodeHtmlEntities, decodeStringFieldsDeep } from "@/lib/utils";
 
-export function decodeStringFields<T>(input: T): T {
-  if (Array.isArray(input)) {
-    return input.map((v) => decodeStringFields(v)) as unknown as T;
-  }
-  if (input && typeof input === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(input as Record<string, unknown>)) {
-      out[k] = decodeStringFields(v);
-    }
-    return out as T;
-  }
-  if (typeof input === "string") return decodeEntities(input) as unknown as T;
-  return input;
-}
+// Re-export untuk back-compat dengan import lama di folder ini.
+export const decodeEntities = (v: unknown): string =>
+  typeof v === "string"
+    ? decodeHtmlEntities(v)
+    : v === null || v === undefined
+    ? ""
+    : String(v);
+
+export const decodeStringFields = decodeStringFieldsDeep;
 
 export const cardCls =
   "rounded-lg border border-gray-200 bg-gray-50/60 p-3 space-y-3";

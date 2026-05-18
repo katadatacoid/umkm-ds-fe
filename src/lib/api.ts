@@ -831,13 +831,18 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
     linkShopee?: string;
     linkLazada?: string;
     linkBukalapak?: string;
+    linkBlibli?: string;
+    linkTiktok?: string;
+    linkGofood?: string;
+    linkGrabfood?: string;
+    linkShopeefood?: string;
     linkLainnya?: string;
     image?: File;
   }): Promise<{ success: boolean; message: string; data: { id: string } }> {
     console.log('Creating product...', formDataOrObject);
-    
+
     let formData: FormData;
-    
+
     if (formDataOrObject instanceof FormData) {
       formData = formDataOrObject;
     } else {
@@ -846,13 +851,16 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
       if (formDataOrObject.description) formData.append('description', formDataOrObject.description);
       formData.append('price', formDataOrObject.price.toString());
       formData.append('status', formDataOrObject.status);
-      
-      if (formDataOrObject.linkTokopedia) formData.append('linkTokopedia', formDataOrObject.linkTokopedia);
-      if (formDataOrObject.linkShopee) formData.append('linkShopee', formDataOrObject.linkShopee);
-      if (formDataOrObject.linkLazada) formData.append('linkLazada', formDataOrObject.linkLazada);
-      if (formDataOrObject.linkBukalapak) formData.append('linkBukalapak', formDataOrObject.linkBukalapak);
-      if (formDataOrObject.linkLainnya) formData.append('linkLainnya', formDataOrObject.linkLainnya);
-      
+
+      const linkKeys = [
+        'linkTokopedia', 'linkShopee', 'linkLazada', 'linkBukalapak', 'linkBlibli',
+        'linkTiktok', 'linkGofood', 'linkGrabfood', 'linkShopeefood', 'linkLainnya',
+      ] as const;
+      for (const key of linkKeys) {
+        const value = formDataOrObject[key];
+        if (value) formData.append(key, value);
+      }
+
       if (formDataOrObject.image) formData.append('image', formDataOrObject.image);
     }
 
@@ -869,7 +877,7 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
     return response.json();
   },
 
-  // Update product
+  // Update product (partial). Kirim string kosong pada field link untuk hapus key tsb di BE.
   async update(id: string | number, formDataOrObject: FormData | {
     name?: string;
     description?: string;
@@ -879,13 +887,18 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
     linkShopee?: string;
     linkLazada?: string;
     linkBukalapak?: string;
+    linkBlibli?: string;
+    linkTiktok?: string;
+    linkGofood?: string;
+    linkGrabfood?: string;
+    linkShopeefood?: string;
     linkLainnya?: string;
     image?: File;
   }): Promise<{ success: boolean; message: string }> {
     console.log(`Updating product ID: ${id}`, formDataOrObject);
-    
+
     let formData: FormData;
-    
+
     if (formDataOrObject instanceof FormData) {
       formData = formDataOrObject;
     } else {
@@ -894,13 +907,16 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
       if (formDataOrObject.description !== undefined) formData.append('description', formDataOrObject.description);
       if (formDataOrObject.price) formData.append('price', formDataOrObject.price.toString());
       if (formDataOrObject.status) formData.append('status', formDataOrObject.status);
-      
-      if (formDataOrObject.linkTokopedia !== undefined) formData.append('linkTokopedia', formDataOrObject.linkTokopedia);
-      if (formDataOrObject.linkShopee !== undefined) formData.append('linkShopee', formDataOrObject.linkShopee);
-      if (formDataOrObject.linkLazada !== undefined) formData.append('linkLazada', formDataOrObject.linkLazada);
-      if (formDataOrObject.linkBukalapak !== undefined) formData.append('linkBukalapak', formDataOrObject.linkBukalapak);
-      if (formDataOrObject.linkLainnya !== undefined) formData.append('linkLainnya', formDataOrObject.linkLainnya);
-      
+
+      const linkKeys = [
+        'linkTokopedia', 'linkShopee', 'linkLazada', 'linkBukalapak', 'linkBlibli',
+        'linkTiktok', 'linkGofood', 'linkGrabfood', 'linkShopeefood', 'linkLainnya',
+      ] as const;
+      for (const key of linkKeys) {
+        const value = formDataOrObject[key];
+        if (value !== undefined) formData.append(key, value);
+      }
+
       if (formDataOrObject.image) formData.append('image', formDataOrObject.image);
     }
 
@@ -1752,6 +1768,30 @@ export const footerAPI = {
       method: "DELETE",
     });
     return unwrapJson(res, "Gagal menghapus social link");
+  },
+};
+
+// ============================================================
+// Media Library — /media (image upload backend)
+// Lihat AI_CONTEXT_MEDIA_STORAGE.md untuk detail endpoint.
+// ============================================================
+
+export interface MediaUploadResult {
+  id: string;
+  path: string;
+  url: string;
+}
+
+export const mediaAPI = {
+  async upload(file: File): Promise<MediaUploadResult> {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await authenticatedFetch(`${API_URL}/media/upload`, {
+      method: "POST",
+      body: fd,
+    });
+    const json = await unwrapJson(res, "Gagal mengunggah file");
+    return json.data as MediaUploadResult;
   },
 };
 
