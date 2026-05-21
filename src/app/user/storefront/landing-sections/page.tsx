@@ -282,12 +282,12 @@ const LandingSectionsPage: React.FC = () => {
               })}
             </div>
 
-            {/* ✅ Key Unggulan: hanya tampil jika templateId === 4 */}
+          
             {showKeyUnggulan && (
               <div className="mt-4 pt-3 border-t border-gray-100">
                 <div className="flex items-center justify-between px-2 mb-2">
                   <span className="text-xs font-semibold uppercase text-gray-500">
-                    Key Unggulan ({data.key_unggulan.length})
+                    Keunggulan produk ({data.key_unggulan.length})
                   </span>
                   <button
                     onClick={handleCreateKeyUnggulan}
