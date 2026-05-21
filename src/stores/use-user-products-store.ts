@@ -1,6 +1,21 @@
 import { create } from "zustand";
 import { productAPI } from "@/lib/api";
 
+export const ECOMMERCE_PLATFORMS = [
+  { key: "linkTokopedia", apiKey: "tokopedia", label: "Tokopedia" },
+  { key: "linkShopee", apiKey: "shopee", label: "Shopee" },
+  { key: "linkLazada", apiKey: "lazada", label: "Lazada" },
+  { key: "linkBukalapak", apiKey: "bukalapak", label: "Bukalapak" },
+  { key: "linkBlibli", apiKey: "blibli", label: "Blibli" },
+  { key: "linkTiktok", apiKey: "tiktok", label: "TikTok" },
+  { key: "linkGofood", apiKey: "gofood", label: "GoFood" },
+  { key: "linkGrabfood", apiKey: "grabfood", label: "GrabFood" },
+  { key: "linkShopeefood", apiKey: "shopeefood", label: "ShopeeFood" },
+  { key: "linkLainnya", apiKey: "lainnya", label: "Lainnya" },
+] as const;
+
+export type EcommerceLinkKey = (typeof ECOMMERCE_PLATFORMS)[number]["key"];
+
 export interface Product {
   id: number;
   name: string;
@@ -9,6 +24,11 @@ export interface Product {
   linkShopee?: string;
   linkLazada?: string;
   linkBukalapak?: string;
+  linkBlibli?: string;
+  linkTiktok?: string;
+  linkGofood?: string;
+  linkGrabfood?: string;
+  linkShopeefood?: string;
   linkLainnya?: string;
   description: string;
   image: string;
@@ -89,6 +109,11 @@ fetchProductsData: async (options?: FetchProductsOptions) => {
       linkShopee: p.ecommerce_links?.shopee,
       linkLazada: p.ecommerce_links?.lazada,
       linkBukalapak: p.ecommerce_links?.bukalapak,
+      linkBlibli: p.ecommerce_links?.blibli,
+      linkTiktok: p.ecommerce_links?.tiktok,
+      linkGofood: p.ecommerce_links?.gofood,
+      linkGrabfood: p.ecommerce_links?.grabfood,
+      linkShopeefood: p.ecommerce_links?.shopeefood,
       linkLainnya: p.ecommerce_links?.lainnya,
       description: p.description || "",
       image:
@@ -146,34 +171,17 @@ fetchProductsData: async (options?: FetchProductsOptions) => {
     try {
       const status = productData.status === "aktif" ? "aktif" : "nonaktif";
 
-      const createData: {
-        name: string;
-        description?: string;
-        price: number;
-        status: string;
-        linkTokopedia?: string;
-        linkShopee?: string;
-        linkLazada?: string;
-        linkBukalapak?: string;
-        linkLainnya?: string;
-        image?: File;
-      } = {
+      const createData: Parameters<typeof productAPI.create>[0] = {
         name: productData.name,
         description: productData.description,
         price: productData.price,
         status: status,
       };
 
-      if (productData.linkTokopedia)
-        createData.linkTokopedia = productData.linkTokopedia;
-      if (productData.linkShopee)
-        createData.linkShopee = productData.linkShopee;
-      if (productData.linkLazada)
-        createData.linkLazada = productData.linkLazada;
-      if (productData.linkBukalapak)
-        createData.linkBukalapak = productData.linkBukalapak;
-      if (productData.linkLainnya)
-        createData.linkLainnya = productData.linkLainnya;
+      for (const { key } of ECOMMERCE_PLATFORMS) {
+        const value = productData[key];
+        if (value) (createData as Record<string, unknown>)[key] = value;
+      }
 
       await productAPI.create(createData);
 
@@ -204,34 +212,20 @@ fetchProductsData: async (options?: FetchProductsOptions) => {
         status = updates.status === "aktif" ? "aktif" : "nonaktif";
       }
 
-      const updateData: {
-        name?: string;
-        description?: string;
-        price?: number;
-        status?: string;
-        linkTokopedia?: string;
-        linkShopee?: string;
-        linkLazada?: string;
-        linkBukalapak?: string;
-        linkLainnya?: string;
-        image?: File;
-      } = {};
+      const updateData: Parameters<typeof productAPI.update>[1] = {};
 
       if (updates.name) updateData.name = updates.name;
       if (updates.description !== undefined)
         updateData.description = updates.description;
       if (updates.price) updateData.price = updates.price;
       if (status) updateData.status = status;
-      if (updates.linkTokopedia !== undefined)
-        updateData.linkTokopedia = updates.linkTokopedia;
-      if (updates.linkShopee !== undefined)
-        updateData.linkShopee = updates.linkShopee;
-      if (updates.linkLazada !== undefined)
-        updateData.linkLazada = updates.linkLazada;
-      if (updates.linkBukalapak !== undefined)
-        updateData.linkBukalapak = updates.linkBukalapak;
-      if (updates.linkLainnya !== undefined)
-        updateData.linkLainnya = updates.linkLainnya;
+
+      for (const { key } of ECOMMERCE_PLATFORMS) {
+        const value = updates[key];
+        if (value !== undefined) {
+          (updateData as Record<string, unknown>)[key] = value;
+        }
+      }
 
       await productAPI.update(id, updateData);
 

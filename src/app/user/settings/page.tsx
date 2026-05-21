@@ -17,6 +17,7 @@ const UserSettingsPage = () => {
     namaUsaha: '',
     description: '',
     noTelpon: '',
+    jamOperasional: '',
   });
 
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -49,6 +50,7 @@ const UserSettingsPage = () => {
             namaUsaha: umkm?.namaUsaha || '',
             description: umkm?.description || '',
             noTelpon: phone || '',
+            jamOperasional: umkm?.jamOperasional || '',
           });
           if (umkm?.logo_img) {
             setExistingLogo(`${API_URL}${umkm.logo_img}`);
@@ -121,6 +123,7 @@ const UserSettingsPage = () => {
         namaUsaha: formData.namaUsaha,
         description: formData.description,
         noTelpon: formData.noTelpon,
+        jamOperasional: formData.jamOperasional,
         logo: logoFile ?? undefined,
         passwordLama: passwordLama || undefined,
         passwordBaru: passwordBaru || undefined,
@@ -260,6 +263,25 @@ const UserSettingsPage = () => {
                     className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
                     placeholder="08********"
                   />
+                </div>
+
+                {/* Jam Operasional */}
+                <div className="flex flex-col">
+                  <label htmlFor="jamOperasional" className="text-sm font-medium text-gray-700">
+                    Jam Operasional
+                  </label>
+                  <input
+                    type="text"
+                    id="jamOperasional"
+                    name="jamOperasional"
+                    value={formData.jamOperasional}
+                    onChange={handleChange}
+                    className="mt-1 px-4 py-2 border border-gray-200 rounded-md focus:outline-none focus:ring-2 focus:ring-green-600"
+                    placeholder="Senin-Jumat 08:00-17:00, Sabtu 09:00-14:00"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    Contoh: Senin-Jumat 08:00-17:00, Sabtu 09:00-14:00
+                  </p>
                 </div>
 
                 {/* Ganti Password */}
