@@ -43,7 +43,7 @@ const DsUser = () => {
       />
 
       <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex flex-col lg:w-[60%] min-w-0">
+        <div className="flex flex-col lg:w-[100%] min-w-0">
           <StatsSection 
             title="Ringkasan Aktivitas" 
             stats={statsData} 
@@ -52,9 +52,9 @@ const DsUser = () => {
           <PageViewsChart />
         </div>
 
-        <div className="lg:w-[40%] min-w-0">
+        {/* <div className="lg:w-[40%] min-w-0">
           <EarningsChart />
-        </div>
+        </div> */}
       </div>
 
       <DemoTableRecentProduct

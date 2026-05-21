@@ -103,6 +103,9 @@ export interface UserProfile {
     phone: string;
     email: string;
     status: string;
+    template_id?: number | null;
+    domain_name?: string | null;
+    jamOperasional?: string | null;
   } | null;
 }
 
@@ -370,8 +373,32 @@ export const authAPI = {
     return tokens;
   },
 
-  logout() {
+  // POST /login/logout
+  // Authorization: Bearer <access_token>
+  // Body (opsional): { "refresh_token": "<refresh_token>" }
+  async logout(): Promise<void> {
+    const accessToken = getAccessToken();
+    const refreshToken = getRefreshToken();
+
+    if (accessToken) {
+      try {
+        await fetch(`${API_URL}/login/logout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: refreshToken ? JSON.stringify({ refresh_token: refreshToken }) : undefined,
+        });
+      } catch (error) {
+        console.error('Logout API call failed:', error);
+      }
+    }
+
     clearTokens();
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('user_info');
+    }
   },
 };
 
@@ -804,13 +831,18 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
     linkShopee?: string;
     linkLazada?: string;
     linkBukalapak?: string;
+    linkBlibli?: string;
+    linkTiktok?: string;
+    linkGofood?: string;
+    linkGrabfood?: string;
+    linkShopeefood?: string;
     linkLainnya?: string;
     image?: File;
   }): Promise<{ success: boolean; message: string; data: { id: string } }> {
     console.log('Creating product...', formDataOrObject);
-    
+
     let formData: FormData;
-    
+
     if (formDataOrObject instanceof FormData) {
       formData = formDataOrObject;
     } else {
@@ -819,13 +851,16 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
       if (formDataOrObject.description) formData.append('description', formDataOrObject.description);
       formData.append('price', formDataOrObject.price.toString());
       formData.append('status', formDataOrObject.status);
-      
-      if (formDataOrObject.linkTokopedia) formData.append('linkTokopedia', formDataOrObject.linkTokopedia);
-      if (formDataOrObject.linkShopee) formData.append('linkShopee', formDataOrObject.linkShopee);
-      if (formDataOrObject.linkLazada) formData.append('linkLazada', formDataOrObject.linkLazada);
-      if (formDataOrObject.linkBukalapak) formData.append('linkBukalapak', formDataOrObject.linkBukalapak);
-      if (formDataOrObject.linkLainnya) formData.append('linkLainnya', formDataOrObject.linkLainnya);
-      
+
+      const linkKeys = [
+        'linkTokopedia', 'linkShopee', 'linkLazada', 'linkBukalapak', 'linkBlibli',
+        'linkTiktok', 'linkGofood', 'linkGrabfood', 'linkShopeefood', 'linkLainnya',
+      ] as const;
+      for (const key of linkKeys) {
+        const value = formDataOrObject[key];
+        if (value) formData.append(key, value);
+      }
+
       if (formDataOrObject.image) formData.append('image', formDataOrObject.image);
     }
 
@@ -842,7 +877,7 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
     return response.json();
   },
 
-  // Update product
+  // Update product (partial). Kirim string kosong pada field link untuk hapus key tsb di BE.
   async update(id: string | number, formDataOrObject: FormData | {
     name?: string;
     description?: string;
@@ -852,13 +887,18 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
     linkShopee?: string;
     linkLazada?: string;
     linkBukalapak?: string;
+    linkBlibli?: string;
+    linkTiktok?: string;
+    linkGofood?: string;
+    linkGrabfood?: string;
+    linkShopeefood?: string;
     linkLainnya?: string;
     image?: File;
   }): Promise<{ success: boolean; message: string }> {
     console.log(`Updating product ID: ${id}`, formDataOrObject);
-    
+
     let formData: FormData;
-    
+
     if (formDataOrObject instanceof FormData) {
       formData = formDataOrObject;
     } else {
@@ -867,13 +907,16 @@ async getAll(search?: string, status?: string): Promise<ProductsResponse & { sta
       if (formDataOrObject.description !== undefined) formData.append('description', formDataOrObject.description);
       if (formDataOrObject.price) formData.append('price', formDataOrObject.price.toString());
       if (formDataOrObject.status) formData.append('status', formDataOrObject.status);
-      
-      if (formDataOrObject.linkTokopedia !== undefined) formData.append('linkTokopedia', formDataOrObject.linkTokopedia);
-      if (formDataOrObject.linkShopee !== undefined) formData.append('linkShopee', formDataOrObject.linkShopee);
-      if (formDataOrObject.linkLazada !== undefined) formData.append('linkLazada', formDataOrObject.linkLazada);
-      if (formDataOrObject.linkBukalapak !== undefined) formData.append('linkBukalapak', formDataOrObject.linkBukalapak);
-      if (formDataOrObject.linkLainnya !== undefined) formData.append('linkLainnya', formDataOrObject.linkLainnya);
-      
+
+      const linkKeys = [
+        'linkTokopedia', 'linkShopee', 'linkLazada', 'linkBukalapak', 'linkBlibli',
+        'linkTiktok', 'linkGofood', 'linkGrabfood', 'linkShopeefood', 'linkLainnya',
+      ] as const;
+      for (const key of linkKeys) {
+        const value = formDataOrObject[key];
+        if (value !== undefined) formData.append(key, value);
+      }
+
       if (formDataOrObject.image) formData.append('image', formDataOrObject.image);
     }
 
@@ -954,11 +997,14 @@ export interface UserProfile {
   umkm: {
     id: string;
     namaUsaha: string;
-    description: string | null; 
+    description: string | null;
     logo_img: string | null;
     phone: string;
     email: string;
     status: string;
+    template_id?: number | null;
+    domain_name?: string | null;
+    jamOperasional?: string | null;
   } | null;
 }
 
@@ -992,6 +1038,7 @@ export const userAPI = {
     namaUsaha: string;
     description?: string;
     noTelpon: string;
+    jamOperasional?: string;
     logo?: File;
     passwordLama?: string;
     passwordBaru?: string;
@@ -1003,6 +1050,7 @@ export const userAPI = {
     formData.append("namaUsaha", data.namaUsaha);
     if (data.description !== undefined) formData.append("description", data.description);
     formData.append("noTelpon", data.noTelpon);
+    if (data.jamOperasional !== undefined) formData.append("jamOperasional", data.jamOperasional);
     if (data.logo) formData.append("logo", data.logo);
 
     // Hanya append jika ada isinya
@@ -1020,5 +1068,840 @@ export const userAPI = {
     }
 
     return response.json();
+  },
+};
+
+// ============================================================
+// Contact / Inbox API
+// ============================================================
+
+export interface ContactStatsData {
+  total?: number;
+  unread?: number;
+  read?: number;
+  replied?: number;
+  archived?: number;
+  today?: number;
+  this_week?: number;
+  this_month?: number;
+  [key: string]: number | string | undefined;
+}
+
+export interface ContactStatsResponse {
+  success: boolean;
+  data: ContactStatsData;
+  message?: string;
+}
+
+export interface ContactMessage {
+  id: number | string;
+  name: string;
+  email: string;
+  message: string;
+  ip_address?: string | null;
+  user_agent?: string | null;
+  status: string;
+  created_at: string;
+  updated_at?: string | null;
+}
+
+export interface ContactPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface ContactListResponse {
+  success: boolean;
+  data: ContactMessage[];
+  pagination?: ContactPagination;
+  message?: string;
+}
+
+export interface ContactDetailResponse {
+  success: boolean;
+  data: ContactMessage;
+  message?: string;
+}
+
+export interface ContactBulkUpdateResponse {
+  success: boolean;
+  message?: string;
+  count?: number;
+}
+
+export interface ContactListParams {
+  page?: number;
+  limit?: number;
+  status?: string;
+  search?: string;
+}
+
+const buildContactQuery = (params: ContactListParams = {}) => {
+  const q = new URLSearchParams();
+  if (params.page) q.set("page", String(params.page));
+  if (params.limit) q.set("limit", String(params.limit));
+  if (params.status) q.set("status", params.status);
+  if (params.search && params.search.trim()) q.set("search", params.search.trim());
+  return q.toString();
+};
+
+export const contactAPI = {
+  async getStats(): Promise<ContactStatsResponse> {
+    const response = await authenticatedFetch(`${API_URL}/api/contact/stats`);
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch contact stats";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  async getAll(params: ContactListParams = {}): Promise<ContactListResponse> {
+    const qs = buildContactQuery(params);
+    const url = qs ? `${API_URL}/api/contact?${qs}` : `${API_URL}/api/contact`;
+
+    const response = await authenticatedFetch(url);
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch contact list";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  // Loop semua halaman (limit max 100) dan gabungkan datanya.
+  async getAllPaginated(
+    params: Omit<ContactListParams, "page" | "limit"> = {}
+  ): Promise<ContactListResponse> {
+    const limit = 100;
+    const all: ContactMessage[] = [];
+    let page = 1;
+    let pagination: ContactPagination | undefined;
+
+    while (true) {
+      const res = await this.getAll({ ...params, page, limit });
+      if (res.data?.length) all.push(...res.data);
+      pagination = res.pagination;
+      const totalPages = pagination?.totalPages ?? 1;
+      if (page >= totalPages || !res.data?.length) break;
+      page += 1;
+    }
+
+    return {
+      success: true,
+      data: all,
+      pagination: pagination
+        ? { ...pagination, page: 1, limit }
+        : { page: 1, limit, total: all.length, totalPages: 1 },
+    };
+  },
+
+  async getById(id: string | number): Promise<ContactDetailResponse> {
+    const response = await authenticatedFetch(`${API_URL}/api/contact/${id}`);
+
+    if (!response.ok) {
+      let errorMessage = "Failed to fetch contact detail";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+
+  async markAllRead(): Promise<ContactBulkUpdateResponse> {
+    const response = await authenticatedFetch(
+      `${API_URL}/api/contact/mark-all-read`,
+      { method: "PATCH" }
+    );
+
+    if (!response.ok) {
+      let errorMessage = "Failed to mark all as read";
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorMessage;
+      } catch (e) {
+        // Ignore
+      }
+      throw new Error(errorMessage);
+    }
+
+    return response.json();
+  },
+};
+
+// ============================================================
+// Storefront (Landing Page UMKM) API
+// Base path: /storefront
+// ============================================================
+
+export type SectionKey =
+  | "hero"
+  | "who_we_are"
+  | "our_products"
+  | "marquee"
+  | "why_choose_us"
+  | "explore_products"
+  | "blog_insights"
+  | "footer"
+  | string;
+
+export interface LandingSection<TContent = unknown> {
+  id: string;
+  user_product_id: string;
+  template_id: number;
+  section_key: SectionKey;
+  is_visible: boolean;
+  sort_order: number;
+  content: TContent;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Faq {
+  id: string;
+  user_product_id: string;
+  question: string;
+  answer: string;
+  sort_order: number;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Testimonial {
+  id: string;
+  user_product_id: string;
+  customer_name: string;
+  customer_role: string | null;
+  avatar_url: string | null;
+  rating: number;
+  body: string;
+  is_featured: boolean;
+  is_visible: boolean;
+  sort_order: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BlogStatus = "draft" | "published" | "archived";
+
+export interface BlogPost {
+  id: string;
+  user_product_id: string;
+  slug: string;
+  title: string;
+  category: string | null;
+  excerpt: string | null;
+  body: string;
+  cover_image_url: string | null;
+  read_minutes: number | null;
+  status: BlogStatus;
+  is_featured: boolean;
+  published_at: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface ListResponse<T> {
+  success: true;
+  count?: number;
+  data: T[];
+  pagination?: { page: number; limit: number; total: number; totalPages: number };
+}
+
+interface ItemResponse<T> {
+  success: true;
+  data: T;
+}
+
+async function unwrapJson(response: Response, fallback: string) {
+  if (!response.ok) {
+    let msg = fallback;
+    try {
+      const err = await response.json();
+      msg = err.message || msg;
+    } catch {
+      // ignore
+    }
+    throw new Error(msg);
+  }
+  return response.json();
+}
+
+let _cachedUserProductId: string | null = null;
+
+export async function resolveUserProductId(force = false): Promise<string> {
+  if (!force && _cachedUserProductId) return _cachedUserProductId;
+
+  const res = await productAPI.getAll();
+  const first = res.data?.[0];
+  if (!first?.user_product_id) {
+    throw new Error("Tidak dapat menentukan user_product_id. Pastikan akun memiliki UMKM aktif.");
+  }
+  _cachedUserProductId = String(first.user_product_id);
+  return _cachedUserProductId;
+}
+
+export function clearUserProductIdCache() {
+  _cachedUserProductId = null;
+}
+
+function publicFetch(path: string): Promise<Response> {
+  return fetch(`${API_URL}${path}`, { headers: { "Content-Type": "application/json" } });
+}
+
+export const landingSectionsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    template_id?: number;
+    include_hidden?: boolean;
+  }): Promise<ListResponse<LandingSection>> {
+    const qs = new URLSearchParams();
+    qs.append("user_product_id", String(params.user_product_id));
+    if (params.template_id !== undefined) qs.append("template_id", String(params.template_id));
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/landing-sections/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat sections");
+  },
+
+  async getByKey(params: {
+    user_product_id: string | number;
+    template_id: number;
+    section_key: string;
+  }): Promise<ItemResponse<LandingSection>> {
+    const qs = new URLSearchParams({
+      user_product_id: String(params.user_product_id),
+      template_id: String(params.template_id),
+      section_key: params.section_key,
+    });
+    const res = await publicFetch(`/storefront/landing-sections/by-key?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat section");
+  },
+
+  async upsert(
+    section_key: string,
+    body: { template_id: number; content: unknown; is_visible?: boolean; sort_order?: number }
+  ): Promise<ItemResponse<LandingSection>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing-sections/${encodeURIComponent(section_key)}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menyimpan section");
+  },
+};
+
+export const faqsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    include_hidden?: boolean;
+  }): Promise<ListResponse<Faq>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/faqs/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat FAQ");
+  },
+
+  async create(body: {
+    question: string;
+    answer: string;
+    sort_order?: number;
+    is_visible?: boolean;
+  }): Promise<ItemResponse<Faq>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/faqs`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menambahkan FAQ");
+  },
+
+  async update(
+    id: string | number,
+    body: Partial<{ question: string; answer: string; sort_order: number; is_visible: boolean }>
+  ): Promise<ItemResponse<Faq>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/faqs/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui FAQ");
+  },
+
+  async remove(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/faqs/${id}`, { method: "DELETE" });
+    return unwrapJson(res, "Gagal menghapus FAQ");
+  },
+};
+
+export const testimonialsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    featured?: boolean;
+    include_hidden?: boolean;
+  }): Promise<ListResponse<Testimonial>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.featured !== undefined) qs.append("featured", String(params.featured));
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/testimonials/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat testimonial");
+  },
+
+  async create(body: {
+    customer_name: string;
+    body: string;
+    customer_role?: string | null;
+    avatar_url?: string | null;
+    rating?: number;
+    is_featured?: boolean;
+    is_visible?: boolean;
+    sort_order?: number;
+  }): Promise<ItemResponse<Testimonial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/testimonials`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menambahkan testimonial");
+  },
+
+  async update(
+    id: string | number,
+    body: Partial<{
+      customer_name: string;
+      body: string;
+      customer_role: string | null;
+      avatar_url: string | null;
+      rating: number;
+      is_featured: boolean;
+      is_visible: boolean;
+      sort_order: number;
+    }>
+  ): Promise<ItemResponse<Testimonial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/testimonials/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui testimonial");
+  },
+
+  async remove(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/testimonials/${id}`, { method: "DELETE" });
+    return unwrapJson(res, "Gagal menghapus testimonial");
+  },
+};
+
+export const blogPostsAPI = {
+  async getAll(params: {
+    user_product_id: string | number;
+    status?: BlogStatus | "all";
+    featured?: boolean;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<ListResponse<BlogPost>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.status) qs.append("status", params.status);
+    if (params.featured !== undefined) qs.append("featured", String(params.featured));
+    if (params.search) qs.append("search", params.search);
+    if (params.page) qs.append("page", String(params.page));
+    if (params.limit) qs.append("limit", String(params.limit));
+    const res = await publicFetch(`/storefront/blog-posts/all?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat blog post");
+  },
+
+  async getBySlug(params: {
+    user_product_id: string | number;
+    slug: string;
+  }): Promise<ItemResponse<BlogPost>> {
+    const qs = new URLSearchParams({
+      user_product_id: String(params.user_product_id),
+      slug: params.slug,
+    });
+    const res = await publicFetch(`/storefront/blog-posts/by-slug?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat blog post");
+  },
+
+  async create(body: {
+    slug: string;
+    title: string;
+    body: string;
+    category?: string | null;
+    excerpt?: string | null;
+    cover_image_url?: string | null;
+    read_minutes?: number | null;
+    status?: BlogStatus;
+    is_featured?: boolean;
+    published_at?: string | null;
+  }): Promise<ItemResponse<BlogPost>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menambahkan blog post");
+  },
+
+  async update(
+    id: string | number,
+    body: Partial<{
+      slug: string;
+      title: string;
+      body: string;
+      category: string | null;
+      excerpt: string | null;
+      cover_image_url: string | null;
+      read_minutes: number | null;
+      status: BlogStatus;
+      is_featured: boolean;
+      published_at: string | null;
+    }>
+  ): Promise<ItemResponse<BlogPost>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui blog post");
+  },
+
+  async remove(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts/${id}`, { method: "DELETE" });
+    return unwrapJson(res, "Gagal menghapus blog post");
+  },
+};
+
+// ============================================================
+// Footer CMS API
+// Base path: /storefront/footer
+// ============================================================
+
+export interface FooterBrand {
+  id: string;
+  user_product_id: string;
+  brand_name: string | null;
+  brand_description: string | null;
+  brand_tagline: string | null;
+  brand_logo_url: string | null;
+  copyright_suffix: string | null;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FooterMenuItem {
+  id: string;
+  menu_group_id: string;
+  label: string;
+  href: string;
+  sort_order: number;
+  is_visible: boolean;
+}
+
+export interface FooterMenuGroup {
+  id: string;
+  user_product_id: string;
+  title: string;
+  sort_order: number;
+  is_visible: boolean;
+  items: FooterMenuItem[];
+}
+
+export interface FooterSocial {
+  id: string;
+  user_product_id: string;
+  platform: string;
+  label: string | null;
+  url: string;
+  icon: string | null;
+  sort_order: number;
+  is_visible: boolean;
+}
+
+export interface FooterBundle {
+  footer: FooterBrand | null;
+  menu_groups: FooterMenuGroup[];
+  socials: FooterSocial[];
+}
+
+export type FooterBrandPayload = Partial<{
+  brand_name: string;
+  brand_description: string;
+  brand_tagline: string;
+  brand_logo_url: string;
+  copyright_suffix: string;
+  is_visible: boolean;
+}>;
+
+export type FooterMenuGroupPayload = {
+  title: string;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export type FooterMenuItemPayload = {
+  label: string;
+  href: string;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export type FooterSocialPayload = {
+  platform: string;
+  url: string;
+  label?: string;
+  icon?: string;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export const footerAPI = {
+  async getBundle(params: {
+    user_product_id: string | number;
+    include_hidden?: boolean;
+  }): Promise<ItemResponse<FooterBundle>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat footer");
+  },
+
+  async upsertBrand(body: FooterBrandPayload): Promise<ItemResponse<FooterBrand>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menyimpan footer");
+  },
+
+  async createMenuGroup(body: FooterMenuGroupPayload): Promise<ItemResponse<FooterMenuGroup>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-groups`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat menu group");
+  },
+
+  async updateMenuGroup(
+    id: string | number,
+    body: Partial<FooterMenuGroupPayload>
+  ): Promise<ItemResponse<FooterMenuGroup>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-groups/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui menu group");
+  },
+
+  async removeMenuGroup(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-groups/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus menu group");
+  },
+
+  async createMenuItem(
+    groupId: string | number,
+    body: FooterMenuItemPayload
+  ): Promise<ItemResponse<FooterMenuItem>> {
+    const res = await authenticatedFetch(
+      `${API_URL}/storefront/footer/menu-groups/${groupId}/items`,
+      { method: "POST", body: JSON.stringify(body) }
+    );
+    return unwrapJson(res, "Gagal membuat menu item");
+  },
+
+  async updateMenuItem(
+    id: string | number,
+    body: Partial<FooterMenuItemPayload>
+  ): Promise<ItemResponse<FooterMenuItem>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-items/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui menu item");
+  },
+
+  async removeMenuItem(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/menu-items/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus menu item");
+  },
+
+  async createSocial(body: FooterSocialPayload): Promise<ItemResponse<FooterSocial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/socials`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat social link");
+  },
+
+  async updateSocial(
+    id: string | number,
+    body: Partial<FooterSocialPayload>
+  ): Promise<ItemResponse<FooterSocial>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/socials/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui social link");
+  },
+
+  async removeSocial(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/footer/socials/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus social link");
+  },
+};
+
+// ============================================================
+// Media Library — /media (image upload backend)
+// Lihat AI_CONTEXT_MEDIA_STORAGE.md untuk detail endpoint.
+// ============================================================
+
+export interface MediaUploadResult {
+  id: string;
+  path: string;
+  url: string;
+}
+
+export const mediaAPI = {
+  async upload(file: File): Promise<MediaUploadResult> {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await authenticatedFetch(`${API_URL}/media/upload`, {
+      method: "POST",
+      body: fd,
+    });
+    const json = await unwrapJson(res, "Gagal mengunggah file");
+    return json.data as MediaUploadResult;
+  },
+};
+
+// ============================================================
+// Landing v2 (normalized) — /storefront/landing
+// ============================================================
+
+export type LandingSingletonKind = "hero" | "cta" | "cta_product" | "cta_filosofi";
+export type LandingKind = LandingSingletonKind | "key_unggulan_item";
+
+export interface LandingSectionImage {
+  id: string;
+  image_url: string;
+  alt_text: string | null;
+  sort_order: number;
+}
+
+export interface LandingSectionV2 {
+  id: string;
+  judul: string | null;
+  tagline: string | null;
+  deskripsi: string | null;
+  image_url: string | null;
+  background_url: string | null;
+  sort_order: number;
+  is_visible: boolean;
+  images: LandingSectionImage[];
+}
+
+export interface LandingAggregateData {
+  hero: LandingSectionV2 | null;
+  cta: LandingSectionV2 | null;
+  cta_product: LandingSectionV2 | null;
+  cta_filosofi: LandingSectionV2 | null;
+  key_unggulan: LandingSectionV2[];
+}
+
+export type LandingSectionInput = Partial<{
+  judul: string | null;
+  tagline: string | null;
+  deskripsi: string | null;
+  image_url: string | null;
+  background_url: string | null;
+  sort_order: number;
+  is_visible: boolean;
+  images: { image_url: string; alt_text?: string | null; sort_order?: number }[];
+}>;
+
+export const landingV2API = {
+  async getAggregate(params: {
+    user_product_id: string | number;
+    template_id: number;
+    include_hidden?: boolean;
+  }): Promise<ItemResponse<LandingAggregateData>> {
+    const qs = new URLSearchParams({
+      user_product_id: String(params.user_product_id),
+      template_id: String(params.template_id),
+    });
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await publicFetch(`/storefront/landing?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat landing");
+  },
+
+  async upsertSingleton(
+    kind: LandingSingletonKind,
+    body: { template_id: number } & LandingSectionInput
+  ): Promise<ItemResponse<LandingSectionV2>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/${kind}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menyimpan section");
+  },
+
+  async createKeyUnggulan(
+    body: { template_id: number } & LandingSectionInput
+  ): Promise<ItemResponse<LandingSectionV2>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/key-unggulan`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat item");
+  },
+
+  async updateKeyUnggulan(
+    id: string | number,
+    body: LandingSectionInput
+  ): Promise<ItemResponse<LandingSectionV2>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/key-unggulan/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui item");
+  },
+
+  async removeKeyUnggulan(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/landing/key-unggulan/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus item");
+  },
+
+  async reorderKeyUnggulan(body: {
+    template_id: number;
+    order: { id: string; sort_order: number }[];
+  }): Promise<{ success: true; message?: string }> {
+    const res = await authenticatedFetch(
+      `${API_URL}/storefront/landing/key-unggulan/reorder`,
+      { method: "PATCH", body: JSON.stringify(body) }
+    );
+    return unwrapJson(res, "Gagal reorder");
   },
 };
