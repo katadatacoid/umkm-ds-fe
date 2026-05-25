@@ -11,7 +11,6 @@ export type TestimonialFormPayload = {
   customer_role: string;
   avatar_url: string;
   rating: number;
-  is_featured: boolean;
   is_visible: boolean;
   sort_order: number;
 };
@@ -29,7 +28,6 @@ export default function TestimonialForm({ mode, initial, onSubmit }: Props) {
   const [customerRole, setCustomerRole] = useState(initial?.customer_role || "");
   const [avatarUrl, setAvatarUrl] = useState(initial?.avatar_url || "");
   const [rating, setRating] = useState<number>(initial?.rating ?? 5);
-  const [isFeatured, setIsFeatured] = useState(initial?.is_featured ?? false);
   const [isVisible, setIsVisible] = useState(initial?.is_visible ?? true);
   const [sortOrder, setSortOrder] = useState<number>(initial?.sort_order ?? 0);
   const [submitting, setSubmitting] = useState(false);
@@ -52,7 +50,6 @@ export default function TestimonialForm({ mode, initial, onSubmit }: Props) {
         customer_role: customerRole.trim(),
         avatar_url: avatarUrl.trim(),
         rating: Number(rating) || 0,
-        is_featured: isFeatured,
         is_visible: isVisible,
         sort_order: Number(sortOrder) || 0,
       });
@@ -135,15 +132,6 @@ export default function TestimonialForm({ mode, initial, onSubmit }: Props) {
       </div>
 
       <div className="flex items-center gap-6">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            checked={isFeatured}
-            onChange={(e) => setIsFeatured(e.target.checked)}
-            className="h-4 w-4 accent-emerald-600"
-          />
-          Featured
-        </label>
         <label className="flex items-center gap-2 text-sm text-gray-700">
           <input
             type="checkbox"

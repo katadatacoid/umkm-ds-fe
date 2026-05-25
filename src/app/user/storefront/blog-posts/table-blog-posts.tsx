@@ -46,12 +46,12 @@ export default function TableBlogPosts({ onEdit }: Props) {
           );
         },
       },
-      {
-        key: "is_featured",
-        header: "Featured",
-        width: "100px",
-        render: (v) => (v ? "Ya" : "-"),
-      },
+      // {
+      //   key: "is_featured",
+      //   header: "Featured",
+      //   width: "100px",
+      //   render: (v) => (v ? "Ya" : "-"),
+      // },
       {
         key: "published_at",
         header: "Tayang",

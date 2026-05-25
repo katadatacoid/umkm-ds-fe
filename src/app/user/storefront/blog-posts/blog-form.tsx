@@ -14,7 +14,6 @@ export type BlogFormPayload = {
   cover_image_url: string;
   read_minutes: number | null;
   status: BlogStatus;
-  is_featured: boolean;
 };
 
 interface Props {
@@ -45,7 +44,6 @@ export default function BlogForm({ mode, initial, onSubmit }: Props) {
     initial?.read_minutes != null ? String(initial.read_minutes) : ""
   );
   const [status, setStatus] = useState<BlogStatus>(initial?.status || "draft");
-  const [isFeatured, setIsFeatured] = useState(initial?.is_featured ?? false);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -69,7 +67,6 @@ export default function BlogForm({ mode, initial, onSubmit }: Props) {
         cover_image_url: coverImageUrl.trim(),
         read_minutes: readMinutes.trim() ? Number(readMinutes) : null,
         status,
-        is_featured: isFeatured,
       });
       router.push("/user/storefront/blog-posts");
     } catch (err) {
@@ -177,15 +174,6 @@ export default function BlogForm({ mode, initial, onSubmit }: Props) {
             <option value="archived">Archived</option>
           </select>
         </div>
-        <label className="flex items-center gap-2 text-sm text-gray-700 mt-6">
-          <input
-            type="checkbox"
-            checked={isFeatured}
-            onChange={(e) => setIsFeatured(e.target.checked)}
-            className="h-4 w-4 accent-emerald-600"
-          />
-          Featured
-        </label>
       </div>
 
       <div className="flex justify-end gap-3 pt-3 border-t border-gray-100">

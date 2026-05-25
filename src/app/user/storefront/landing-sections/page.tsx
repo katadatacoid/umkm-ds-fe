@@ -10,10 +10,10 @@ import { useLandingStore } from "@/stores/use-landing-store";
 
 // ─── Semua section yang mungkin ada ───────────────────────────────────────────
 const ALL_SINGLETON_KINDS: { kind: LandingSingletonKind; label: string }[] = [
-  { kind: "hero",         label: "Hero"         },
-  { kind: "cta",          label: "CTA"          },
-  { kind: "cta_product",  label: "CTA Produk"   },
-  { kind: "cta_filosofi", label: "CTA Filosofi" },
+  { kind: "hero",         label: "Banner cover utama"           },
+  { kind: "cta",          label: "Banner tombol utama"          },
+  { kind: "cta_product",  label: "Banner tombol produk"         },
+  { kind: "cta_filosofi", label: "Banner tombol Filosofi" },
 ];
 
 // ─── Aturan per template: kind mana yang TIDAK boleh muncul ───────────────────
