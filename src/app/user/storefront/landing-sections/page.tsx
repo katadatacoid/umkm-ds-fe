@@ -8,17 +8,24 @@ import KeyUnggulanList from "./v2/key-unggulan-list";
 import { userAPI, resolveUserProductId, type LandingSingletonKind } from "@/lib/api";
 import { useLandingStore } from "@/stores/use-landing-store";
 
-const SINGLETON_KINDS: { kind: LandingSingletonKind; label: string }[] = [
-  { kind: "hero", label: "Hero" },
-  { kind: "cta", label: "CTA" },
-  { kind: "cta_product", label: "CTA Produk" },
+// ─── Semua section yang mungkin ada ───────────────────────────────────────────
+const ALL_SINGLETON_KINDS: { kind: LandingSingletonKind; label: string }[] = [
+  { kind: "hero",         label: "Hero"         },
+  { kind: "cta",          label: "CTA"          },
+  { kind: "cta_product",  label: "CTA Produk"   },
   { kind: "cta_filosofi", label: "CTA Filosofi" },
 ];
 
-const FE_WEB_BASE = (process.env.NEXT_PUBLIC_FE_WEB || "https://demo.rumahdigitalku.id").replace(
-  /\/+$/,
-  ""
-);
+// ─── Aturan per template: kind mana yang TIDAK boleh muncul ───────────────────
+const KIND_ALLOWED_TEMPLATES: Partial<Record<LandingSingletonKind, number[]>> = {
+  cta_filosofi: [4], // hanya muncul di template ID 4
+};
+
+const KEY_UNGGULAN_ALLOWED_TEMPLATES = [4];
+
+const FE_WEB_BASE = (
+  process.env.NEXT_PUBLIC_FE_WEB || "https://demo.rumahdigitalku.id"
+).replace(/\/+$/, "");
 
 type Selection =
   | { type: "singleton"; kind: LandingSingletonKind }
@@ -39,9 +46,12 @@ const LandingSectionsPage: React.FC = () => {
     reorderKeyUnggulan,
   } = useLandingStore();
 
-  const [selection, setSelection] = useState<Selection | null>(null);
+  const [selection, setSelection]       = useState<Selection | null>(null);
   const [userProductId, setUserProductId] = useState<string | null>(null);
-  const [creating, setCreating] = useState(false);
+  const [creating, setCreating]         = useState(false);
+
+  const showKeyUnggulan = templateId != null &&
+    KEY_UNGGULAN_ALLOWED_TEMPLATES.includes(Number(templateId));
 
   useEffect(() => {
     let cancelled = false;
@@ -65,13 +75,22 @@ const LandingSectionsPage: React.FC = () => {
       setUserProductId(upid ?? null);
       if (!cancelled) refresh();
     })();
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => { cancelled = true; };
   }, []);
 
-  const previewUrl = userProductId ? `${FE_WEB_BASE}/web/${userProductId}` : null;
+  // ─── Filter SINGLETON_KINDS berdasarkan templateId ────────────────────────
+  const allowedSingletonKinds = useMemo(() => {
+    return ALL_SINGLETON_KINDS.filter(({ kind }) => {
+      const allowedTemplates = KIND_ALLOWED_TEMPLATES[kind];
+      if (!allowedTemplates) return true;
+      if (templateId == null) return false;
+      return allowedTemplates.includes(Number(templateId));
+    });
+  }, [templateId]);
+
+  const previewUrl = userProductId
+    ? `${FE_WEB_BASE}/web/${userProductId}`
+    : null;
 
   const handlePreview = () => {
     if (!previewUrl) {
@@ -83,16 +102,27 @@ const LandingSectionsPage: React.FC = () => {
 
   const singletonItems = useMemo(
     () =>
-      SINGLETON_KINDS.map(({ kind, label }) => ({
+      allowedSingletonKinds.map(({ kind, label }) => ({
         kind,
         label,
         section: data[kind],
       })),
-    [data]
+    [allowedSingletonKinds, data]
   );
 
   const totalCount =
-    singletonItems.filter((s) => s.section).length + data.key_unggulan.length;
+    singletonItems.filter((s) => s.section).length +
+    (showKeyUnggulan ? data.key_unggulan.length : 0);
+
+  useEffect(() => {
+    if (selection?.type === "singleton") {
+      const stillAllowed = allowedSingletonKinds.some((k) => k.kind === selection.kind);
+      if (!stillAllowed) setSelection(null);
+    }
+    if (selection?.type === "key_unggulan" && !showKeyUnggulan) {
+      setSelection(null);
+    }
+  }, [allowedSingletonKinds, showKeyUnggulan, selection]);
 
   // Pilih item default kalau belum ada.
   useEffect(() => {
@@ -100,10 +130,10 @@ const LandingSectionsPage: React.FC = () => {
     const firstSingleton = singletonItems.find((s) => s.section);
     if (firstSingleton) {
       setSelection({ type: "singleton", kind: firstSingleton.kind });
-    } else if (data.key_unggulan[0]) {
+    } else if (showKeyUnggulan && data.key_unggulan[0]) {
       setSelection({ type: "key_unggulan", id: data.key_unggulan[0].id });
     }
-  }, [selection, singletonItems, data.key_unggulan]);
+  }, [selection, singletonItems, data.key_unggulan, showKeyUnggulan]);
 
   const handleCreateSingleton = async (kind: LandingSingletonKind) => {
     setCreating(true);
@@ -203,9 +233,7 @@ const LandingSectionsPage: React.FC = () => {
                     key={kind}
                     className={
                       "flex items-stretch rounded-md transition " +
-                      (active
-                        ? "bg-emerald-50"
-                        : "hover:bg-gray-50")
+                      (active ? "bg-emerald-50" : "hover:bg-gray-50")
                     }
                   >
                     <button
@@ -227,9 +255,10 @@ const LandingSectionsPage: React.FC = () => {
                     </button>
                     <button
                       onClick={() =>
-                        upsertSingleton(kind, { is_visible: !section.is_visible }).catch(
-                          (err) =>
-                            alert(err instanceof Error ? err.message : "Gagal mengubah")
+                        upsertSingleton(kind, {
+                          is_visible: !section.is_visible,
+                        }).catch((err) =>
+                          alert(err instanceof Error ? err.message : "Gagal mengubah")
                         )
                       }
                       title={section.is_visible ? "Sembunyikan" : "Tampilkan"}
@@ -237,33 +266,13 @@ const LandingSectionsPage: React.FC = () => {
                       aria-label={section.is_visible ? "Sembunyikan" : "Tampilkan"}
                     >
                       {section.is_visible ? (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          className="w-4 h-4"
-                          aria-hidden="true"
-                        >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
                           <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                          <path
-                            fillRule="evenodd"
-                            d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z"
-                            clipRule="evenodd"
-                          />
+                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                         </svg>
                       ) : (
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                          className="w-4 h-4"
-                          aria-hidden="true"
-                        >
-                          <path
-                            fillRule="evenodd"
-                            d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z"
-                            clipRule="evenodd"
-                          />
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
+                          <path fillRule="evenodd" d="M3.707 2.293a1 1 0 00-1.414 1.414l14 14a1 1 0 001.414-1.414l-1.473-1.473A10.014 10.014 0 0019.542 10C18.268 5.943 14.478 3 10 3a9.958 9.958 0 00-4.512 1.074l-1.78-1.781zm4.261 4.26l1.514 1.515a2.003 2.003 0 012.45 2.45l1.514 1.514a4 4 0 00-5.478-5.478z" clipRule="evenodd" />
                           <path d="M12.454 16.697L9.75 13.992a4 4 0 01-3.742-3.741L2.335 6.578A9.98 9.98 0 00.458 10c1.274 4.057 5.064 7 9.542 7 .847 0 1.669-.105 2.454-.303z" />
                         </svg>
                       )}
@@ -273,33 +282,42 @@ const LandingSectionsPage: React.FC = () => {
               })}
             </div>
 
-            <div className="mt-4 pt-3 border-t border-gray-100">
-              <div className="flex items-center justify-between px-2 mb-2">
-                <span className="text-xs font-semibold uppercase text-gray-500">
-                  Key Unggulan ({data.key_unggulan.length})
-                </span>
-                <button
-                  onClick={handleCreateKeyUnggulan}
-                  disabled={creating}
-                  className="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-400"
-                >
-                  + Tambah
-                </button>
+          
+            {showKeyUnggulan && (
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <div className="flex items-center justify-between px-2 mb-2">
+                  <span className="text-xs font-semibold uppercase text-gray-500">
+                    Keunggulan produk ({data.key_unggulan.length})
+                  </span>
+                  <button
+                    onClick={handleCreateKeyUnggulan}
+                    disabled={creating}
+                    className="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-400"
+                  >
+                    + Tambah
+                  </button>
+                </div>
+                <KeyUnggulanList
+                  items={data.key_unggulan}
+                  activeId={
+                    selection?.type === "key_unggulan" ? selection.id : null
+                  }
+                  onSelect={(id) => setSelection({ type: "key_unggulan", id })}
+                  onReorder={reorderKeyUnggulan}
+                />
               </div>
-              <KeyUnggulanList
-                items={data.key_unggulan}
-                activeId={selection?.type === "key_unggulan" ? selection.id : null}
-                onSelect={(id) => setSelection({ type: "key_unggulan", id })}
-                onReorder={reorderKeyUnggulan}
-              />
-            </div>
+            )}
           </aside>
 
           <div>
             {activeSection && selection ? (
               <SectionEditorV2
                 key={activeSection.id}
-                kind={selection.type === "singleton" ? selection.kind : "key_unggulan_item"}
+                kind={
+                  selection.type === "singleton"
+                    ? selection.kind
+                    : "key_unggulan_item"
+                }
                 section={activeSection}
                 onSave={async (body) => {
                   if (selection.type === "singleton") {
