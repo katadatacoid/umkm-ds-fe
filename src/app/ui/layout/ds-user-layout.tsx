@@ -14,7 +14,6 @@ import {
   faPalette,
   faCircleQuestion,
   faComments,
-  faNewspaper,
   faWindowMinimize,
   faAddressCard,
 } from "@fortawesome/free-solid-svg-icons";
@@ -121,13 +120,6 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       label: "Testimonial",
       hasDivider: false,
       menuKey: "testimonials",  // ← hanya template 3
-    },
-    {
-      href: `/${path}/storefront/blog-posts`,
-      icon: faNewspaper,
-      label: "Blog Post",
-      hasDivider: false,
-      menuKey: null,
     },
     {
       href: `/${path}/storefront/about`,
