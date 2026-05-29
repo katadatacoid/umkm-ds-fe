@@ -20,6 +20,8 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { LandingSectionV2 } from "@/lib/api";
 
+// ← SectionTooltip TIDAK dipakai di sini
+
 interface RowProps {
   item: LandingSectionV2;
   active: boolean;
@@ -48,7 +50,7 @@ function SortableRow({ item, active, onSelect }: RowProps) {
           type="button"
           {...attributes}
           {...listeners}
-          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 px-1"
+          className="cursor-grab active:cursor-grabbing text-gray-400 hover:text-gray-600 px-1 flex-shrink-0"
           title="Drag untuk urutkan"
           aria-label="Drag handle"
         >
@@ -57,7 +59,7 @@ function SortableRow({ item, active, onSelect }: RowProps) {
         <button
           type="button"
           onClick={onSelect}
-          className="flex-1 text-left"
+          className="flex-1 text-left min-w-0"
         >
           <div className={"truncate " + (active ? "font-medium" : "")}>
             {item.judul || "(tanpa judul)"}
