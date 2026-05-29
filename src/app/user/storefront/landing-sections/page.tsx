@@ -5,20 +5,19 @@ import DashboardUserLayout from "@/app/ui/layout/ds-user-layout";
 import HeadSummary from "@/app/ui/headers/header-summary";
 import SectionEditorV2 from "./v2/section-editor-v2";
 import KeyUnggulanList from "./v2/key-unggulan-list";
+import SectionTooltip from "@/components/SectionTooltip";
 import { userAPI, resolveUserProductId, type LandingSingletonKind } from "@/lib/api";
 import { useLandingStore } from "@/stores/use-landing-store";
 
-// ─── Semua section yang mungkin ada ───────────────────────────────────────────
 const ALL_SINGLETON_KINDS: { kind: LandingSingletonKind; label: string }[] = [
-  { kind: "hero",         label: "Hero"         },
-  { kind: "cta",          label: "CTA"          },
-  { kind: "cta_product",  label: "CTA Produk"   },
-  { kind: "cta_filosofi", label: "CTA Filosofi" },
+  { kind: "hero",         label: "Banner cover utama"    },
+  { kind: "cta",          label: "Banner tombol utama"   },
+  { kind: "cta_product",  label: "Banner tombol produk"  },
+  { kind: "cta_filosofi", label: "Banner tombol Filosofi"},
 ];
 
-// ─── Aturan per template: kind mana yang TIDAK boleh muncul ───────────────────
 const KIND_ALLOWED_TEMPLATES: Partial<Record<LandingSingletonKind, number[]>> = {
-  cta_filosofi: [4], // hanya muncul di template ID 4
+  cta_filosofi: [4],
 };
 
 const KEY_UNGGULAN_ALLOWED_TEMPLATES = [4];
@@ -46,31 +45,22 @@ const LandingSectionsPage: React.FC = () => {
     reorderKeyUnggulan,
   } = useLandingStore();
 
-  const [selection, setSelection]       = useState<Selection | null>(null);
+  const [selection, setSelection]         = useState<Selection | null>(null);
   const [userProductId, setUserProductId] = useState<string | null>(null);
-  const [creating, setCreating]         = useState(false);
+  const [creating, setCreating]           = useState(false);
 
-  const showKeyUnggulan = templateId != null &&
-    KEY_UNGGULAN_ALLOWED_TEMPLATES.includes(Number(templateId));
+  const showKeyUnggulan =
+    templateId != null && KEY_UNGGULAN_ALLOWED_TEMPLATES.includes(Number(templateId));
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const [profileRes, upid] = await Promise.all([
-        userAPI.getMe().catch((e) => {
-          console.error("[landing] getMe error:", e);
-          return null;
-        }),
-        resolveUserProductId().catch((e) => {
-          console.error("[landing] resolveUserProductId error:", e);
-          return null;
-        }),
+        userAPI.getMe().catch((e) => { console.error("[landing] getMe error:", e); return null; }),
+        resolveUserProductId().catch((e) => { console.error("[landing] resolveUserProductId error:", e); return null; }),
       ]);
       if (cancelled) return;
-      console.log("[landing] getMe response:", profileRes);
-      console.log("[landing] resolveUserProductId:", upid);
       const tid = profileRes?.data?.umkm?.template_id;
-      console.log("[landing] template_id from profile:", tid);
       if (tid) setTemplateId(tid);
       setUserProductId(upid ?? null);
       if (!cancelled) refresh();
@@ -78,7 +68,6 @@ const LandingSectionsPage: React.FC = () => {
     return () => { cancelled = true; };
   }, []);
 
-  // ─── Filter SINGLETON_KINDS berdasarkan templateId ────────────────────────
   const allowedSingletonKinds = useMemo(() => {
     return ALL_SINGLETON_KINDS.filter(({ kind }) => {
       const allowedTemplates = KIND_ALLOWED_TEMPLATES[kind];
@@ -88,9 +77,7 @@ const LandingSectionsPage: React.FC = () => {
     });
   }, [templateId]);
 
-  const previewUrl = userProductId
-    ? `${FE_WEB_BASE}/web/${userProductId}`
-    : null;
+  const previewUrl = userProductId ? `${FE_WEB_BASE}/web/${userProductId}` : null;
 
   const handlePreview = () => {
     if (!previewUrl) {
@@ -119,12 +106,9 @@ const LandingSectionsPage: React.FC = () => {
       const stillAllowed = allowedSingletonKinds.some((k) => k.kind === selection.kind);
       if (!stillAllowed) setSelection(null);
     }
-    if (selection?.type === "key_unggulan" && !showKeyUnggulan) {
-      setSelection(null);
-    }
+    if (selection?.type === "key_unggulan" && !showKeyUnggulan) setSelection(null);
   }, [allowedSingletonKinds, showKeyUnggulan, selection]);
 
-  // Pilih item default kalau belum ada.
   useEffect(() => {
     if (selection) return;
     const firstSingleton = singletonItems.find((s) => s.section);
@@ -177,13 +161,7 @@ const LandingSectionsPage: React.FC = () => {
             title={previewUrl ?? "user_product_id belum tersedia"}
             className="px-4 py-2 bg-emerald-600 text-white text-sm rounded-md hover:bg-emerald-700 transition disabled:bg-gray-400 inline-flex items-center gap-2"
           >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-4 h-4"
-              aria-hidden="true"
-            >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4" aria-hidden="true">
               <path d="M11 3a1 1 0 100 2h2.586l-6.293 6.293a1 1 0 101.414 1.414L15 6.414V9a1 1 0 102 0V4a1 1 0 00-1-1h-5z" />
               <path d="M5 5a2 2 0 00-2 2v8a2 2 0 002 2h8a2 2 0 002-2v-3a1 1 0 10-2 0v3H5V7h3a1 1 0 000-2H5z" />
             </svg>
@@ -212,6 +190,7 @@ const LandingSectionsPage: React.FC = () => {
               {singletonItems.map(({ kind, label, section }) => {
                 const active =
                   selection?.type === "singleton" && selection.kind === kind;
+
                 if (!section) {
                   return (
                     <button
@@ -222,12 +201,15 @@ const LandingSectionsPage: React.FC = () => {
                       title={`Buat section ${label}`}
                     >
                       <div className="flex items-center justify-between">
-                        <span>{label}</span>
+                        <SectionTooltip kind={kind} position="right">
+                          <span>{label}</span>
+                        </SectionTooltip>
                         <span className="text-[10px] text-emerald-600">+ buat</span>
                       </div>
                     </button>
                   );
                 }
+
                 return (
                   <div
                     key={kind}
@@ -239,30 +221,38 @@ const LandingSectionsPage: React.FC = () => {
                     <button
                       onClick={() => setSelection({ type: "singleton", kind })}
                       className={
-                        "flex-1 text-left px-3 py-2 text-sm " +
+                        "flex-1 min-w-0 text-left px-3 py-2 text-sm " +
                         (active ? "text-emerald-700 font-medium" : "text-gray-700")
                       }
                     >
-                      <div className="flex items-center justify-between">
-                        <span>{label}</span>
+                      {/*
+                        ↓ FIX indentasi subtitle:
+                            - tambah `min-w-0 overflow-hidden` agar flex item tidak meluber
+                            - tambah `flex-shrink-0` pada badge "hidden"
+                      */}
+                      <div className="flex items-center gap-1 min-w-0 overflow-hidden">
+                        <SectionTooltip kind={kind} position="right">
+                          <span>{label}</span>
+                        </SectionTooltip>
                         {!section.is_visible && (
-                          <span className="text-[10px] text-gray-400">hidden</span>
+                          <span className="ml-auto flex-shrink-0 text-[10px] text-gray-400">
+                            hidden
+                          </span>
                         )}
                       </div>
-                      <div className="text-[11px] text-gray-400 truncate">
+                      <div className="text-[11px] text-gray-400 truncate mt-0.5">
                         {section.judul || "(tanpa judul)"}
                       </div>
                     </button>
+
                     <button
                       onClick={() =>
-                        upsertSingleton(kind, {
-                          is_visible: !section.is_visible,
-                        }).catch((err) =>
-                          alert(err instanceof Error ? err.message : "Gagal mengubah")
+                        upsertSingleton(kind, { is_visible: !section.is_visible }).catch(
+                          (err) => alert(err instanceof Error ? err.message : "Gagal mengubah")
                         )
                       }
                       title={section.is_visible ? "Sembunyikan" : "Tampilkan"}
-                      className="px-2 text-gray-400 hover:text-gray-700"
+                      className="px-2 text-gray-400 hover:text-gray-700 flex-shrink-0"
                       aria-label={section.is_visible ? "Sembunyikan" : "Tampilkan"}
                     >
                       {section.is_visible ? (
@@ -282,31 +272,31 @@ const LandingSectionsPage: React.FC = () => {
               })}
             </div>
 
-          
-            {showKeyUnggulan && (
-              <div className="mt-4 pt-3 border-t border-gray-100">
-                <div className="flex items-center justify-between px-2 mb-2">
+           {showKeyUnggulan && (
+            <div className="mt-4 pt-3 border-t border-gray-100">
+              <div className="flex items-center justify-between px-2 mb-2">
+                {/* Tooltip hanya wrap teks, bukan seluruh span */}
+                <SectionTooltip kind="key_unggulan_item" position="right">
                   <span className="text-xs font-semibold uppercase text-gray-500">
-                    Keunggulan produk ({data.key_unggulan.length})
+                    Keunggulan produk
                   </span>
-                  <button
-                    onClick={handleCreateKeyUnggulan}
-                    disabled={creating}
-                    className="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-400"
-                  >
-                    + Tambah
-                  </button>
-                </div>
-                <KeyUnggulanList
-                  items={data.key_unggulan}
-                  activeId={
-                    selection?.type === "key_unggulan" ? selection.id : null
-                  }
-                  onSelect={(id) => setSelection({ type: "key_unggulan", id })}
-                  onReorder={reorderKeyUnggulan}
-                />
+                </SectionTooltip>
+                <button
+                  onClick={handleCreateKeyUnggulan}
+                  disabled={creating}
+                  className="text-xs px-2 py-1 rounded-md bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-gray-400"
+                >
+                  + Tambah
+                </button>
               </div>
-            )}
+              <KeyUnggulanList
+                items={data.key_unggulan}
+                activeId={selection?.type === "key_unggulan" ? selection.id : null}
+                onSelect={(id) => setSelection({ type: "key_unggulan", id })}
+                onReorder={reorderKeyUnggulan}
+              />
+            </div>
+          )}
           </aside>
 
           <div>
@@ -314,9 +304,7 @@ const LandingSectionsPage: React.FC = () => {
               <SectionEditorV2
                 key={activeSection.id}
                 kind={
-                  selection.type === "singleton"
-                    ? selection.kind
-                    : "key_unggulan_item"
+                  selection.type === "singleton" ? selection.kind : "key_unggulan_item"
                 }
                 section={activeSection}
                 onSave={async (body) => {

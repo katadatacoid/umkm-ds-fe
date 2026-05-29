@@ -44,21 +44,6 @@ export default function TableTestimonials({ onEdit }: Props) {
         render: (v) => shortText(String(v ?? ""), 80),
       },
       {
-        key: "is_featured",
-        header: "Featured",
-        width: "100px",
-        render: (v) => (
-          <span
-            className={classNames(
-              "rounded-full px-2 py-1 text-xs font-medium",
-              v ? "bg-amber-50 text-amber-700" : "bg-gray-100 text-gray-500"
-            )}
-          >
-            {v ? "Ya" : "Tidak"}
-          </span>
-        ),
-      },
-      {
         key: "is_visible",
         header: "Status",
         width: "120px",

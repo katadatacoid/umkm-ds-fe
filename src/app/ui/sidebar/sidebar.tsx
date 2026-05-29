@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useCallback, useEffect, useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import type { IconDefinition } from "@fortawesome/free-solid-svg-icons";
@@ -6,6 +8,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { getUserFromToken } from "@/lib/utils";
 import { authAPI } from "@/lib/api";
+import NavTooltip from "@/components/NavTooltip";
 
 interface LinkItem {
   href: string;
@@ -13,6 +16,7 @@ interface LinkItem {
   label: string;
   hasDivider: boolean;
   badge?: number;
+  tooltipKey?: string | null;
 }
 
 interface SidebarProps {
@@ -22,17 +26,33 @@ interface SidebarProps {
   getLinkClass: (href: string) => string;
 }
 
+// ─── Ikon ⓘ — trigger tooltip ─────────────────────────────────────────────────
+const InfoIcon: React.FC = () => (
+  <svg
+    xmlns="http://www.w3.org/2000/svg"
+    viewBox="0 0 16 16"
+    fill="currentColor"
+    className="w-3.5 h-3.5 flex-shrink-0 text-gray-300 hover:text-gray-500 transition-colors cursor-help"
+    aria-hidden="true"
+  >
+    <path
+      fillRule="evenodd"
+      d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z"
+      clipRule="evenodd"
+    />
+  </svg>
+);
+
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLinkClass }) => {
-  const [userName, setUserName] = useState<string>("User");
-  const [userEmail, setUserEmail] = useState<string>("");
+  const [userName, setUserName]     = useState<string>("User");
+  const [userEmail, setUserEmail]   = useState<string>("");
   const [loggingOut, setLoggingOut] = useState(false);
   const router = useRouter();
 
-  // Ambil nama user dari token saat component mount
   useEffect(() => {
     const user = getUserFromToken();
     if (user) {
-      if (user.name) setUserName(user.name);
+      if (user.name)  setUserName(user.name);
       if (user.email) setUserEmail(user.email);
     }
   }, []);
@@ -54,7 +74,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
     }
   }, [loggingOut, router]);
 
-  // Tutup otomatis ketika klik link di mobile (lg:hidden)
   const handleLinkClick = useCallback(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
       toggleSidebar();
@@ -82,7 +101,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
           "lg:translate-x-0",
           "w-20 lg:w-64",
           "bg-white text-gray-600 border-r border-gray-200 shadow-sm",
-          "flex flex-col"
+          "flex flex-col",
         ].join(" ")}
       >
         {/* Header */}
@@ -90,12 +109,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
           <h2 className="text-xl font-semibold hidden lg:block">Dashboard</h2>
         </div>
 
-        {/* Nav list (scrollable) */}
+        {/* Nav list */}
         <nav className="flex-1 overflow-y-auto px-3 pb-24">
           <ul className="space-y-1">
-            {links.map((link, index) => (
+            {links.map((link) => (
               <React.Fragment key={link.href}>
                 <li>
+                  {/* ← NavTooltip TIDAK lagi membungkus Link, hanya di InfoIcon */}
                   <Link
                     href={link.href}
                     onClick={handleLinkClick}
@@ -103,15 +123,35 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
                       "flex items-center rounded-md px-2 py-2 lg:px-3 lg:py-2",
                       "hover:bg-green-50 hover:text-green-700",
                       "transition-colors duration-150 group",
-                      getLinkClass(link.href)
+                      getLinkClass(link.href),
                     ].join(" ")}
-                    title={link.label} // bantu tooltip saat collapsed
+                    title={link.label}
                   >
+                    {/* Ikon menu */}
                     <FontAwesomeIcon
                       icon={link.icon}
                       className="mr-0 lg:mr-3 text-base lg:text-[15px] shrink-0 group-hover:text-green-600"
                     />
-                    <span className="hidden lg:inline text-sm flex-1">{link.label}</span>
+
+                    {/* Label + ikon ⓘ — hanya di desktop */}
+                    <span className="hidden lg:flex items-center gap-1.5 flex-1 min-w-0">
+                      <span className="text-sm truncate flex-1">{link.label}</span>
+
+                      {/* ⓘ hanya muncul jika ada tooltipKey, dan tooltip hanya trigger dari sini */}
+                      {link.tooltipKey && (
+                        // stopPropagation agar klik ikon tidak ikut navigate
+                        <span
+                          onClick={(e) => e.preventDefault()}
+                          className="inline-flex"
+                        >
+                          <NavTooltip menuKey={link.tooltipKey}>
+                            <InfoIcon />
+                          </NavTooltip>
+                        </span>
+                      )}
+                    </span>
+
+                    {/* Badge notifikasi */}
                     {link.badge && link.badge > 0 ? (
                       <span
                         className="ml-auto rounded-full bg-blue-600 text-white text-[10px] font-semibold px-1.5 py-0.5 min-w-[18px] text-center hidden lg:inline-block"
@@ -135,32 +175,23 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
 
         {/* Fixed bottom: profile + logout */}
         <div className="absolute bottom-0 left-0 right-0 p-3 lg:p-4 hidden sm:flex flex-col gap-2 border-t border-gray-100 bg-white">
-          {/* Profile */}
           <div className="flex items-center">
             <div className="flex w-10 h-10 items-center justify-center rounded-full bg-green-100 text-green-700 font-semibold text-sm shrink-0">
               {(userName || "U").trim().charAt(0).toUpperCase()}
             </div>
-
             <div className="hidden lg:flex flex-col ml-2 min-w-0 flex-1">
               <span className="text-xs text-gray-500">Welcome Back</span>
-              <span
-                className="text-sm font-medium text-gray-700 truncate"
-                title={userName}
-              >
+              <span className="text-sm font-medium text-gray-700 truncate" title={userName}>
                 {userName}
               </span>
               {userEmail && (
-                <span
-                  className="text-[11px] text-gray-400 truncate"
-                  title={userEmail}
-                >
+                <span className="text-[11px] text-gray-400 truncate" title={userEmail}>
                   {userEmail}
                 </span>
               )}
             </div>
           </div>
 
-          {/* Logout button — tepat di bawah profile */}
           <button
             type="button"
             onClick={handleLogout}

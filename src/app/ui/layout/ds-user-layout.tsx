@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "@/app/ui/sidebar/sidebar";
 import MobileNavbar from "@/app/ui/nav/mobile-navbar";
+import NavTooltip from "@/components/NavTooltip"; // ← import NavTooltip
 import {
   faBars,
   faBell,
@@ -28,6 +29,17 @@ const MENU_TEMPLATE_RULES: Record<string, number[]> = {
 };
 
 const TEMPLATE_ID_CACHE_KEY = "umkm_template_id";
+
+// ─── Tipe link yang diperluas dengan tooltipKey ───────────────────────────────
+export interface NavLinkItem {
+  href: string;
+  icon: typeof faHome;
+  label: string;
+  hasDivider: boolean;
+  menuKey: string | null;
+  /** Key yang dipakai NavTooltip untuk menampilkan konten tooltip */
+  tooltipKey: string | null;
+}
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -84,14 +96,15 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
     { icon: faUser,  label: "You",            onClick: handleUserClick          },
   ];
 
-  // ─── Semua definisi link ───────────────────────────────────────────────────
-  const allLinks = [
+  // ─── Semua definisi link (+ tooltipKey) ───────────────────────────────────
+  const allLinks: NavLinkItem[] = [
     {
       href: `/${path}`,
       icon: faHome,
       label: "Beranda",
       hasDivider: false,
       menuKey: null,
+      tooltipKey: "beranda",
     },
     {
       href: `/${path}/products-management`,
@@ -99,6 +112,7 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       label: "Product Management",
       hasDivider: true,
       menuKey: null,
+      tooltipKey: "products",
     },
     {
       href: `/${path}/storefront/landing-sections`,
@@ -106,26 +120,31 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       label: "Landing Page",
       hasDivider: false,
       menuKey: null,
+      tooltipKey: "landing",
     },
     {
       href: `/${path}/storefront/faqs`,
       icon: faCircleQuestion,
       label: "FAQ",
       hasDivider: false,
-      menuKey: "faqs",          // ← hanya template 4
+      menuKey: "faqs",
+      tooltipKey: "faqs",
     },
     {
       href: `/${path}/storefront/testimonials`,
       icon: faComments,
       label: "Testimonial",
       hasDivider: false,
-      menuKey: "testimonials",  // ← hanya template 3
+      menuKey: "testimonials",
+      tooltipKey: "testimonials",
     },
     {
       href: `/${path}/storefront/about`,
       icon: faAddressCard,
       label: "About Us",
       hasDivider: false,
+      menuKey: null,
+      tooltipKey: "about us",
     },
     {
       href: `/${path}/storefront/footer`,
@@ -133,6 +152,7 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       label: "Footer",
       hasDivider: true,
       menuKey: null,
+      tooltipKey: "footer",
     },
     {
       href: `/${path}/affiliate`,
@@ -140,6 +160,7 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       label: "Affiliate",
       hasDivider: false,
       menuKey: null,
+      tooltipKey: "affiliate",
     },
     {
       href: `/${path}/settings`,
@@ -147,6 +168,7 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       label: "Pengaturan",
       hasDivider: false,
       menuKey: null,
+      tooltipKey: "settings",
     },
   ];
 
@@ -164,8 +186,40 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
 
   console.log(pathname);
 
+  // ─── Render sidebar links dengan NavTooltip ───────────────────────────────
+  //
+  // CATATAN INTEGRASI:
+  // Jika komponen <Sidebar> Anda menerima prop `links` dan me-render setiap item
+  // secara internal, ada DUA cara mengintegrasikan NavTooltip:
+  //
+  // CARA A — Lewatkan `tooltipKey` sebagai bagian dari object link (DIREKOMENDASIKAN):
+  //   Sidebar menerima `links` dengan field `tooltipKey`, lalu di dalam Sidebar.tsx:
+  //
+  //   import NavTooltip from "@/components/NavTooltip";
+  //
+  //   {links.map((link) => (
+  //     <NavTooltip key={link.href} menuKey={link.tooltipKey ?? ""}>
+  //       <a href={link.href} className={getLinkClass(link.href)}>
+  //         <FontAwesomeIcon icon={link.icon} />
+  //         <span>{link.label}</span>
+  //       </a>
+  //     </NavTooltip>
+  //   ))}
+  //
+  // CARA B — Render links manual di layout ini (jika Sidebar tidak bisa dimodifikasi):
+  //   Ganti <Sidebar> di bawah dengan <SidebarShell> yang menerima rendered children.
+  //
+  // File ini sudah meneruskan `links` (dengan `tooltipKey`) ke <Sidebar>.
+  // Pastikan Sidebar.tsx diupdate mengikuti CARA A di atas.
+  // ─────────────────────────────────────────────────────────────────────────
+
   return (
     <div className="relative flex h-screen overflow-hidden bg-gray-100">
+      {/*
+        Sidebar menerima `links` yang kini mengandung `tooltipKey`.
+        Di dalam Sidebar.tsx, bungkus setiap link item dengan:
+          <NavTooltip menuKey={link.tooltipKey ?? ""}> ... </NavTooltip>
+      */}
       <Sidebar
         isOpen={isSidebarOpen}
         toggleSidebar={toggleSidebar}
