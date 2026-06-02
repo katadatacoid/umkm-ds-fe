@@ -6,7 +6,7 @@ import SectionHome3 from "@/app/ui/section/section-home3";
 import SectionPrice from "@/app/ui/section/section-price";
 import FooterHome from "@/app/ui/footer/home-footer";
 import SectionTestotemoni from "@/app/ui//section/section-testotemoni";
-import SectionAffiliate from "@/app/ui//section/section-affilant";
+// import SectionAffiliate from "@/app/ui//section/section-affilant";
 import SectionJoinWithUs from "@/app/ui//section/section-joinwith-us";
 
 // Export all components
@@ -17,6 +17,6 @@ export {
   SectionPrice,
   FooterHome,
   SectionTestotemoni,
-  SectionAffiliate,
+  // SectionAffiliate,
   SectionJoinWithUs,
 };

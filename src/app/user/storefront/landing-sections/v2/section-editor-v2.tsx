@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import type {
   LandingSectionImage,
   LandingSectionInput,
@@ -60,10 +60,49 @@ interface Props {
   section: LandingSectionV2;
   onSave: (body: LandingSectionInput) => Promise<void>;
   onDelete?: () => Promise<void>;
+  templateId?: number | string | null;
 }
 
-export default function SectionEditorV2({ kind, section, onSave, onDelete }: Props) {
-  const fields = FIELDS_BY_KIND[kind] ?? FIELDS_BY_KIND.hero;
+export default function SectionEditorV2({ kind, section, onSave, onDelete, templateId }: Props) {
+  
+  const fields = useMemo(() => {
+    const baseFields = FIELDS_BY_KIND[kind] ?? FIELDS_BY_KIND.hero;
+    
+    if (templateId == null) return baseFields;
+    const currentTemplate = Number(templateId);
+
+    // KONDISI AWAL: Sembunyikan background_url untuk jenis 'cta' di template 1 dan 6
+    if (kind === "cta") {
+      if (currentTemplate === 1 || currentTemplate === 6) {
+        return {
+          ...baseFields,
+          background_url: false,
+        };
+      }
+    }
+
+    // KONDISI BARU: Logika penyesuaian khusus untuk 'cta_product'
+    if (kind === "cta_product") {
+      // 1. Sembunyikan image_url di template 2 dan 6
+      if (currentTemplate === 2 || currentTemplate === 6) {
+        return {
+          ...baseFields,
+          image_url: false,
+        };
+      }
+      
+      // 2. Sembunyikan kedua-duanya (image_url & background_url) di template 1, 3, 4, 5
+      if ([1, 3, 4, 5].includes(currentTemplate)) {
+        return {
+          ...baseFields,
+          image_url: false,
+          background_url: false,
+        };
+      }
+    }
+
+    return baseFields;
+  }, [kind, templateId]);
 
   const [judul, setJudul] = useState(section.judul ?? "");
   const [tagline, setTagline] = useState(section.tagline ?? "");
@@ -169,15 +208,6 @@ export default function SectionEditorV2({ kind, section, onSave, onDelete }: Pro
               className="h-4 w-4 accent-emerald-600"
             />
             Tampilkan
-          </label>
-          <label className="text-sm text-gray-700 flex items-center gap-2">
-            Urutan
-            <input
-              type="number"
-              value={sortOrder}
-              onChange={(e) => setSortOrder(Number(e.target.value))}
-              className="w-20 border border-gray-300 rounded-md px-2 py-1 text-sm focus:ring focus:ring-green-200 outline-none"
-            />
           </label>
         </div>
       </div>
