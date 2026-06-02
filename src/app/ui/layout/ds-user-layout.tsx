@@ -15,8 +15,8 @@ import {
   faPalette,
   faCircleQuestion,
   faComments,
-  faNewspaper,
   faWindowMinimize,
+  faAddressCard,
 } from "@fortawesome/free-solid-svg-icons";
 import { usePathname } from "next/navigation";
 import useStore from "@/stores/use-store";
@@ -139,12 +139,12 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       tooltipKey: "testimonials",
     },
     {
-      href: `/${path}/storefront/blog-posts`,
-      icon: faNewspaper,
-      label: "Blog Post",
+      href: `/${path}/storefront/about`,
+      icon: faAddressCard,
+      label: "About Us",
       hasDivider: false,
       menuKey: null,
-      tooltipKey: "blog",
+      tooltipKey: "about us",
     },
     {
       href: `/${path}/storefront/footer`,

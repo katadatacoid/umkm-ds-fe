@@ -1304,25 +1304,6 @@ export interface Testimonial {
   updated_at: string;
 }
 
-export type BlogStatus = "draft" | "published" | "archived";
-
-export interface BlogPost {
-  id: string;
-  user_product_id: string;
-  slug: string;
-  title: string;
-  category: string | null;
-  excerpt: string | null;
-  body: string;
-  cover_image_url: string | null;
-  read_minutes: number | null;
-  status: BlogStatus;
-  is_featured: boolean;
-  published_at: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
 interface ListResponse<T> {
   success: true;
   count?: number;
@@ -1508,84 +1489,6 @@ export const testimonialsAPI = {
   },
 };
 
-export const blogPostsAPI = {
-  async getAll(params: {
-    user_product_id: string | number;
-    status?: BlogStatus | "all";
-    featured?: boolean;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<ListResponse<BlogPost>> {
-    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
-    if (params.status) qs.append("status", params.status);
-    if (params.featured !== undefined) qs.append("featured", String(params.featured));
-    if (params.search) qs.append("search", params.search);
-    if (params.page) qs.append("page", String(params.page));
-    if (params.limit) qs.append("limit", String(params.limit));
-    const res = await publicFetch(`/storefront/blog-posts/all?${qs.toString()}`);
-    return unwrapJson(res, "Gagal memuat blog post");
-  },
-
-  async getBySlug(params: {
-    user_product_id: string | number;
-    slug: string;
-  }): Promise<ItemResponse<BlogPost>> {
-    const qs = new URLSearchParams({
-      user_product_id: String(params.user_product_id),
-      slug: params.slug,
-    });
-    const res = await publicFetch(`/storefront/blog-posts/by-slug?${qs.toString()}`);
-    return unwrapJson(res, "Gagal memuat blog post");
-  },
-
-  async create(body: {
-    slug: string;
-    title: string;
-    body: string;
-    category?: string | null;
-    excerpt?: string | null;
-    cover_image_url?: string | null;
-    read_minutes?: number | null;
-    status?: BlogStatus;
-    is_featured?: boolean;
-    published_at?: string | null;
-  }): Promise<ItemResponse<BlogPost>> {
-    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts`, {
-      method: "POST",
-      body: JSON.stringify(body),
-    });
-    return unwrapJson(res, "Gagal menambahkan blog post");
-  },
-
-  async update(
-    id: string | number,
-    body: Partial<{
-      slug: string;
-      title: string;
-      body: string;
-      category: string | null;
-      excerpt: string | null;
-      cover_image_url: string | null;
-      read_minutes: number | null;
-      status: BlogStatus;
-      is_featured: boolean;
-      published_at: string | null;
-    }>
-  ): Promise<ItemResponse<BlogPost>> {
-    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts/${id}`, {
-      method: "PUT",
-      body: JSON.stringify(body),
-    });
-    return unwrapJson(res, "Gagal memperbarui blog post");
-  },
-
-  async remove(id: string | number): Promise<{ success: true }> {
-    const res = await authenticatedFetch(`${API_URL}/storefront/blog-posts/${id}`, { method: "DELETE" });
-    return unwrapJson(res, "Gagal menghapus blog post");
-  },
-};
-
 // ============================================================
 // Footer CMS API
 // Base path: /storefront/footer
@@ -1768,6 +1671,149 @@ export const footerAPI = {
       method: "DELETE",
     });
     return unwrapJson(res, "Gagal menghapus social link");
+  },
+};
+
+// ============================================================
+// About Us CMS API
+// Base path: /storefront/about
+// ============================================================
+
+export interface About {
+  id: string;
+  user_product_id: string;
+  section_title: string | null;
+  section_subtitle: string | null;
+  company_description: string | null;
+  company_image_url: string | null;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AboutValue {
+  id: string;
+  user_product_id: string;
+  title: string;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AboutTeam {
+  id: string;
+  user_product_id: string;
+  name: string;
+  image_url: string | null;
+  role: string | null;
+  sort_order: number;
+  is_visible: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AboutBundle {
+  about: About | null;
+  values: AboutValue[];
+  team: AboutTeam[];
+}
+
+export type AboutSectionPayload = Partial<{
+  section_title: string | null;
+  section_subtitle: string | null;
+  company_description: string | null;
+  company_image_url: string | null;
+  is_visible: boolean;
+}>;
+
+export type AboutValuePayload = {
+  title: string;
+  description?: string | null;
+  icon?: string | null;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export type AboutTeamPayload = {
+  name: string;
+  image_url?: string | null;
+  role?: string | null;
+  sort_order?: number;
+  is_visible?: boolean;
+};
+
+export const aboutAPI = {
+  async getBundle(params: {
+    user_product_id: string | number;
+    include_hidden?: boolean;
+  }): Promise<ItemResponse<AboutBundle>> {
+    const qs = new URLSearchParams({ user_product_id: String(params.user_product_id) });
+    if (params.include_hidden) qs.append("include_hidden", "true");
+    const res = await authenticatedFetch(`${API_URL}/storefront/about?${qs.toString()}`);
+    return unwrapJson(res, "Gagal memuat about");
+  },
+
+  async upsertAbout(body: AboutSectionPayload): Promise<ItemResponse<About>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/about`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal menyimpan about");
+  },
+
+  async createValue(body: AboutValuePayload): Promise<ItemResponse<AboutValue>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/about/values`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat nilai");
+  },
+
+  async updateValue(
+    id: string | number,
+    body: Partial<AboutValuePayload>
+  ): Promise<ItemResponse<AboutValue>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/about/values/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui nilai");
+  },
+
+  async removeValue(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/about/values/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus nilai");
+  },
+
+  async createTeam(body: AboutTeamPayload): Promise<ItemResponse<AboutTeam>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/about/team`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal membuat anggota team");
+  },
+
+  async updateTeam(
+    id: string | number,
+    body: Partial<AboutTeamPayload>
+  ): Promise<ItemResponse<AboutTeam>> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/about/team/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+    return unwrapJson(res, "Gagal memperbarui anggota team");
+  },
+
+  async removeTeam(id: string | number): Promise<{ success: true }> {
+    const res = await authenticatedFetch(`${API_URL}/storefront/about/team/${id}`, {
+      method: "DELETE",
+    });
+    return unwrapJson(res, "Gagal menghapus anggota team");
   },
 };
 
