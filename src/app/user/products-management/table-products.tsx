@@ -141,7 +141,7 @@ export default function DemoTableProducts() {
   );
 
   return (
-    <div className="max-w-full px-0 py-5" style={{ width: "calc(100%)" }}>
+    <div className="max-w-full px-10 py-5" style={{ width: "calc(100%)" }}>
       {/* Search & Filter */}
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <input
@@ -154,7 +154,7 @@ export default function DemoTableProducts() {
               applyFilters();
             }
           }}
-          className="border border-gray-300 rounded-md px-3 py-2 w-64 text-sm focus:ring focus:ring-green-200 outline-none"
+          className="border border-gray-300 rounded-md px-4 py-2 w-64 text-sm leading-5 focus:ring focus:ring-green-200 outline-none"
         />
 
         <select
@@ -164,7 +164,7 @@ export default function DemoTableProducts() {
             console.log("Status filter changed to:", newValue);
             setStatusFilter(newValue);
           }}
-          className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:ring focus:ring-green-200 outline-none"
+          className="border border-gray-300 rounded-md px-4 py-2 text-sm leading-5 focus:ring focus:ring-green-200 outline-none"
         >
           <option value="">Semua Status</option>
           <option value="published">Aktif</option>

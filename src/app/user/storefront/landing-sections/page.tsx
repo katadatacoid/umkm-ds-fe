@@ -55,13 +55,16 @@ const LandingSectionsPage: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const [profileRes, upid] = await Promise.all([
-        userAPI.getMe().catch((e) => { console.error("[landing] getMe error:", e); return null; }),
-        resolveUserProductId().catch((e) => { console.error("[landing] resolveUserProductId error:", e); return null; }),
-      ]);
+      const profileRes = await userAPI
+        .getMe()
+        .catch((e) => { console.error("[landing] getMe error:", e); return null; });
       if (cancelled) return;
       const tid = profileRes?.data?.umkm?.template_id;
       if (tid) setTemplateId(tid);
+      // Teruskan umkm.id agar resolveUserProductId tidak memanggil getMe() lagi.
+      const upid = await resolveUserProductId({ umkmId: profileRes?.data?.umkm?.id ?? null })
+        .catch((e) => { console.error("[landing] resolveUserProductId error:", e); return null; });
+      if (cancelled) return;
       setUserProductId(upid ?? null);
       if (!cancelled) refresh();
     })();
