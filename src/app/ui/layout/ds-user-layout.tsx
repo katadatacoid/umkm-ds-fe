@@ -154,14 +154,14 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
       menuKey: null,
       tooltipKey: "footer",
     },
-    {
-      href: `/${path}/affiliate`,
-      icon: faShareAlt,
-      label: "Affiliate",
-      hasDivider: false,
-      menuKey: null,
-      tooltipKey: "affiliate",
-    },
+    // {
+    //   href: `/${path}/affiliate`,
+    //   icon: faShareAlt,
+    //   label: "Affiliate",
+    //   hasDivider: false,
+    //   menuKey: null,
+    //   tooltipKey: "affiliate",
+    // },
     {
       href: `/${path}/settings`,
       icon: faGear,
@@ -193,7 +193,7 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
   // secara internal, ada DUA cara mengintegrasikan NavTooltip:
   //
   // CARA A — Lewatkan `tooltipKey` sebagai bagian dari object link (DIREKOMENDASIKAN):
-  //   Sidebar menerima `links` dengan field `tooltipKey`, lalu di dalam Sidebar.tsx:
+  //   Sidebar menerima `links` dengan field `toltipKey`, lalu di dalam Sidebar.tsx:
   //
   //   import NavTooltip from "@/components/NavTooltip";
   //

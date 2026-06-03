@@ -76,7 +76,7 @@ const DashboardAdminLayout: React.FC<DashboardLayoutProps> = ({ children, path }
         { href: `/${path}/users-management`, icon: faUsers, label: "User Management", hasDivider: false },
         { href: `/${path}/transaction`, icon: faReceipt, label: "Transaksi", hasDivider: false },
         { href: `/${path}/inbox`, icon: faEnvelope, label: "Inbox", hasDivider: false, badge: inboxUnread },
-        { href: `/${path}/affiliate`, icon: faShareAlt, label: "Affiliate", hasDivider: true },
+        // { href: `/${path}/affiliate`, icon: faShareAlt, label: "Affiliate", hasDivider: true },
         { href: `/${path}/settings`, icon: faGear, label: "Pengaturan", hasDivider: false },
     ];
 
