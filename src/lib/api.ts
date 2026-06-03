@@ -1332,16 +1332,48 @@ async function unwrapJson(response: Response, fallback: string) {
 
 let _cachedUserProductId: string | null = null;
 
-export async function resolveUserProductId(force = false): Promise<string> {
+/**
+ * Resolusi user_product_id (== umkm.id).
+ * @param opts.umkmId  Jika pemanggil sudah punya profil (mis. dari userAPI.getMe()),
+ *                     teruskan umkm.id di sini agar tidak ada panggilan getMe() ganda.
+ * @param opts.force   Abaikan cache.
+ */
+export async function resolveUserProductId(
+  opts: { umkmId?: string | number | null; force?: boolean } | boolean = {},
+): Promise<string> {
+  // Kompatibel dengan pemanggil lama: resolveUserProductId(true) === { force: true }.
+  const { umkmId: providedUmkmId, force } =
+    typeof opts === "boolean" ? { umkmId: null, force: opts } : opts;
+
   if (!force && _cachedUserProductId) return _cachedUserProductId;
 
+  // Sumber utama: profil UMKM (umkm.id == user_product_id). Tidak butuh adanya barang,
+  // sehingga akun yang sudah punya UMKM aktif namun belum punya produk tetap berhasil.
+  // Pakai umkmId yang diteruskan pemanggil bila ada, agar getMe() tidak dipanggil dua kali.
+  let umkmId: string | number | null | undefined = providedUmkmId;
+  let me: Awaited<ReturnType<typeof userAPI.getMe>> | null = null;
+  if (umkmId == null) {
+    me = await userAPI.getMe();
+    umkmId = me.data?.umkm?.id;
+  }
+  if (umkmId != null && umkmId !== "") {
+    _cachedUserProductId = String(umkmId);
+    return _cachedUserProductId;
+  }
+
+  // Fallback: ambil dari produk pertama (untuk akun lama yang belum balik dari getMe).
   const res = await productAPI.getAll();
   const first = res.data?.[0];
-  if (!first?.user_product_id) {
-    throw new Error("Tidak dapat menentukan user_product_id. Pastikan akun memiliki UMKM aktif.");
+  if (first?.user_product_id) {
+    _cachedUserProductId = String(first.user_product_id);
+    return _cachedUserProductId;
   }
-  _cachedUserProductId = String(first.user_product_id);
-  return _cachedUserProductId;
+
+  console.error("[resolveUserProductId] gagal menentukan user_product_id", {
+    umkm: me?.data?.umkm ?? null,
+    productCount: res.data?.length ?? 0,
+  });
+  throw new Error("Tidak dapat menentukan user_product_id. Pastikan akun memiliki UMKM aktif.");
 }
 
 export function clearUserProductIdCache() {
