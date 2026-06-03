@@ -20,6 +20,10 @@ const KIND_ALLOWED_TEMPLATES: Partial<Record<LandingSingletonKind, number[]>> = 
   cta_filosofi: [4],
 };
 
+const KIND_EXCLUDED_TEMPLATES: Partial<Record<LandingSingletonKind, number[]>> = {
+  cta: [4],
+};
+
 const KEY_UNGGULAN_ALLOWED_TEMPLATES = [4];
 
 const FE_WEB_BASE = (
@@ -70,6 +74,13 @@ const LandingSectionsPage: React.FC = () => {
 
   const allowedSingletonKinds = useMemo(() => {
     return ALL_SINGLETON_KINDS.filter(({ kind }) => {
+      if (templateId != null) {
+        const excludedTemplates = KIND_EXCLUDED_TEMPLATES[kind];
+        if (excludedTemplates && excludedTemplates.includes(Number(templateId))) {
+          return false;
+        }
+      }
+      
       const allowedTemplates = KIND_ALLOWED_TEMPLATES[kind];
       if (!allowedTemplates) return true;
       if (templateId == null) return false;
@@ -225,11 +236,6 @@ const LandingSectionsPage: React.FC = () => {
                         (active ? "text-emerald-700 font-medium" : "text-gray-700")
                       }
                     >
-                      {/*
-                        ↓ FIX indentasi subtitle:
-                            - tambah `min-w-0 overflow-hidden` agar flex item tidak meluber
-                            - tambah `flex-shrink-0` pada badge "hidden"
-                      */}
                       <div className="flex items-center gap-1 min-w-0 overflow-hidden">
                         <SectionTooltip kind={kind} position="right">
                           <span>{label}</span>
@@ -275,7 +281,6 @@ const LandingSectionsPage: React.FC = () => {
            {showKeyUnggulan && (
             <div className="mt-4 pt-3 border-t border-gray-100">
               <div className="flex items-center justify-between px-2 mb-2">
-                {/* Tooltip hanya wrap teks, bukan seluruh span */}
                 <SectionTooltip kind="key_unggulan_item" position="right">
                   <span className="text-xs font-semibold uppercase text-gray-500">
                     Keunggulan produk
@@ -307,6 +312,7 @@ const LandingSectionsPage: React.FC = () => {
                   selection.type === "singleton" ? selection.kind : "key_unggulan_item"
                 }
                 section={activeSection}
+                templateId={templateId}
                 onSave={async (body) => {
                   if (selection.type === "singleton") {
                     await upsertSingleton(selection.kind, body);
