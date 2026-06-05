@@ -144,6 +144,44 @@ export const NAV_TOOLTIP_CONTENT: Record<string, NavTooltipContent> = {
       </svg>
     ),
   },
+
+  "about us": {
+  title: "About Us",
+  description:
+    "Ceritakan siapa Anda di balik toko ini — visi, misi, dan kisah brand Anda. Halaman ini membangun koneksi emosional dengan pelanggan dan memperkuat identitas bisnis.",
+  accentColor: "bg-teal-500",
+  badgeColor: "bg-teal-50",
+  badgeText: "text-teal-600",
+  image: "/images/umkm/aboutus-section.webp",
+  icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path
+        fillRule="evenodd"
+        d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+        clipRule="evenodd"
+      />
+    </svg>
+  ),
+},
+
+sidebar: {
+  title: "Sidebar",
+  description:
+    "Atur konten sidebar toko Anda — tampilkan link media sosial dan informasi kontak yang memudahkan pengunjung terhubung dengan bisnis Anda.",
+  accentColor: "bg-slate-500",
+  badgeColor: "bg-slate-50",
+  badgeText: "text-slate-600",
+  image: "/images/umkm/sidebar-section.webp", // ← pastikan sudah rename, hapus spasi
+  icon: (
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+      <path
+        fillRule="evenodd"
+        d="M3 5a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM3 15a1 1 0 011-1h6a1 1 0 110 2H4a1 1 0 01-1-1z"
+        clipRule="evenodd"
+      />
+    </svg>
+  ),
+},
 };
 
 // ─── Props ────────────────────────────────────────────────────────────────────

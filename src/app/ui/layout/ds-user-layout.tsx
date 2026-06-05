@@ -97,80 +97,73 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
   ];
 
   // ─── Semua definisi link (+ tooltipKey) ───────────────────────────────────
-  const allLinks: NavLinkItem[] = [
-    {
-      href: `/${path}`,
-      icon: faHome,
-      label: "Beranda",
-      hasDivider: false,
-      menuKey: null,
-      tooltipKey: "beranda",
-    },
-    {
-      href: `/${path}/products-management`,
-      icon: faBoxOpen,
-      label: "Product Management",
-      hasDivider: true,
-      menuKey: null,
-      tooltipKey: "products",
-    },
-    {
-      href: `/${path}/storefront/landing-sections`,
-      icon: faPalette,
-      label: "Landing Page",
-      hasDivider: false,
-      menuKey: null,
-      tooltipKey: "landing",
-    },
-    {
-      href: `/${path}/storefront/faqs`,
-      icon: faCircleQuestion,
-      label: "FAQ",
-      hasDivider: false,
-      menuKey: "faqs",
-      tooltipKey: "faqs",
-    },
-    {
-      href: `/${path}/storefront/testimonials`,
-      icon: faComments,
-      label: "Testimonial",
-      hasDivider: false,
-      menuKey: "testimonials",
-      tooltipKey: "testimonials",
-    },
-    {
-      href: `/${path}/storefront/about`,
-      icon: faAddressCard,
-      label: "About Us",
-      hasDivider: false,
-      menuKey: null,
-      tooltipKey: "about us",
-    },
-    {
-      href: `/${path}/storefront/footer`,
-      icon: faWindowMinimize,
-      label: "Footer",
-      hasDivider: true,
-      menuKey: null,
-      tooltipKey: "footer",
-    },
-    // {
-    //   href: `/${path}/affiliate`,
-    //   icon: faShareAlt,
-    //   label: "Affiliate",
-    //   hasDivider: false,
-    //   menuKey: null,
-    //   tooltipKey: "affiliate",
-    // },
-    {
-      href: `/${path}/settings`,
-      icon: faGear,
-      label: "Pengaturan",
-      hasDivider: false,
-      menuKey: null,
-      tooltipKey: "settings",
-    },
-  ];
+ const allLinks: NavLinkItem[] = [
+  {
+    href: `/${path}`,
+    icon: faHome,
+    label: "Beranda",
+    hasDivider: false,
+    menuKey: null,
+    tooltipKey: "beranda",
+  },
+  {
+    href: `/${path}/products-management`,
+    icon: faBoxOpen,
+    label: "Product Management",
+    hasDivider: true,
+    menuKey: null,
+    tooltipKey: "products",
+  },
+  {
+    href: `/${path}/storefront/landing-sections`,
+    icon: faPalette,
+    label: "Landing Page",
+    hasDivider: false,
+    menuKey: null,
+    tooltipKey: "landing",
+  },
+  {
+    href: `/${path}/storefront/faqs`,
+    icon: faCircleQuestion,
+    label: "FAQ",
+    hasDivider: false,
+    menuKey: "faqs",
+    tooltipKey: "faqs",
+  },
+  {
+    href: `/${path}/storefront/testimonials`,
+    icon: faComments,
+    label: "Testimonial",
+    hasDivider: false,
+    menuKey: "testimonials",
+    tooltipKey: "testimonials",
+  },
+  {
+    href: `/${path}/storefront/about`,
+    icon: faAddressCard,
+    label: "About Us",
+    hasDivider: false,
+    menuKey: null,
+    tooltipKey: "about us",
+  },
+  // ↓ Label & tooltipKey berubah untuk template 1
+  {
+    href: `/${path}/storefront/footer`,
+    icon: faWindowMinimize,
+    label: templateId === 1 ? "Sidebar" : "Footer",
+    hasDivider: true,
+    menuKey: null,
+    tooltipKey: templateId === 1 ? "sidebar" : "footer",
+  },
+  {
+    href: `/${path}/settings`,
+    icon: faGear,
+    label: "Pengaturan",
+    hasDivider: false,
+    menuKey: null,
+    tooltipKey: "settings",
+  },
+];
 
   // ─── Filter links berdasarkan templateId ──────────────────────────────────
   const links = allLinks.filter(({ menuKey }) => {

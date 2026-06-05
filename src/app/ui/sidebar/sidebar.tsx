@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation";
 import { getUserFromToken } from "@/lib/utils";
 import { authAPI } from "@/lib/api";
 import NavTooltip from "@/components/NavTooltip";
+import LogoutModal from "@/components/LogoutModal"; // ← import baru
 
 interface LinkItem {
   href: string;
@@ -26,7 +27,6 @@ interface SidebarProps {
   getLinkClass: (href: string) => string;
 }
 
-// ─── Ikon ⓘ — trigger tooltip ─────────────────────────────────────────────────
 const InfoIcon: React.FC = () => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
@@ -44,9 +44,10 @@ const InfoIcon: React.FC = () => (
 );
 
 const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLinkClass }) => {
-  const [userName, setUserName]     = useState<string>("User");
-  const [userEmail, setUserEmail]   = useState<string>("");
-  const [loggingOut, setLoggingOut] = useState(false);
+  const [userName, setUserName]           = useState<string>("User");
+  const [userEmail, setUserEmail]         = useState<string>("");
+  const [loggingOut, setLoggingOut]       = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false); // ← state modal baru
   const router = useRouter();
 
   useEffect(() => {
@@ -57,22 +58,29 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
     }
   }, []);
 
-  const handleLogout = useCallback(async () => {
+  // ─── Buka modal (menggantikan window.confirm) ─────────────────────────────
+  const handleLogoutClick = useCallback(() => {
     if (loggingOut) return;
-    const confirmed =
-      typeof window !== "undefined"
-        ? window.confirm("Yakin ingin keluar dari akun ini?")
-        : true;
-    if (!confirmed) return;
+    setShowLogoutModal(true);
+  }, [loggingOut]);
 
+  // ─── Dipanggil saat user klik "Ya, Keluar" di modal ───────────────────────
+  const handleLogoutConfirm = useCallback(async () => {
     setLoggingOut(true);
     try {
       await authAPI.logout();
     } finally {
       setLoggingOut(false);
+      setShowLogoutModal(false);
       router.replace("/");
     }
-  }, [loggingOut, router]);
+  }, [router]);
+
+  // ─── Dipanggil saat user klik "Batal" atau Escape ─────────────────────────
+  const handleLogoutCancel = useCallback(() => {
+    if (loggingOut) return;
+    setShowLogoutModal(false);
+  }, [loggingOut]);
 
   const handleLinkClick = useCallback(() => {
     if (typeof window !== "undefined" && window.innerWidth < 1024) {
@@ -115,7 +123,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
             {links.map((link) => (
               <React.Fragment key={link.href}>
                 <li>
-                  {/* ← NavTooltip TIDAK lagi membungkus Link, hanya di InfoIcon */}
                   <Link
                     href={link.href}
                     onClick={handleLinkClick}
@@ -127,19 +134,13 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
                     ].join(" ")}
                     title={link.label}
                   >
-                    {/* Ikon menu */}
                     <FontAwesomeIcon
                       icon={link.icon}
                       className="mr-0 lg:mr-3 text-base lg:text-[15px] shrink-0 group-hover:text-green-600"
                     />
-
-                    {/* Label + ikon ⓘ — hanya di desktop */}
                     <span className="hidden lg:flex items-center gap-1.5 flex-1 min-w-0">
                       <span className="text-sm truncate flex-1">{link.label}</span>
-
-                      {/* ⓘ hanya muncul jika ada tooltipKey, dan tooltip hanya trigger dari sini */}
                       {link.tooltipKey && (
-                        // stopPropagation agar klik ikon tidak ikut navigate
                         <span
                           onClick={(e) => e.preventDefault()}
                           className="inline-flex"
@@ -150,8 +151,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
                         </span>
                       )}
                     </span>
-
-                    {/* Badge notifikasi */}
                     {link.badge && link.badge > 0 ? (
                       <span
                         className="ml-auto rounded-full bg-blue-600 text-white text-[10px] font-semibold px-1.5 py-0.5 min-w-[18px] text-center hidden lg:inline-block"
@@ -162,7 +161,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
                     ) : null}
                   </Link>
                 </li>
-
                 {link.hasDivider && (
                   <li aria-hidden="true">
                     <div className="border-t border-gray-200 my-2 mx-2 lg:mx-3" />
@@ -192,9 +190,10 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
             </div>
           </div>
 
+          {/* ← onClick sekarang membuka modal, bukan window.confirm */}
           <button
             type="button"
-            onClick={handleLogout}
+            onClick={handleLogoutClick}
             disabled={loggingOut}
             aria-label="Logout"
             title="Logout"
@@ -207,6 +206,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
           </button>
         </div>
       </aside>
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onConfirm={handleLogoutConfirm}
+        onCancel={handleLogoutCancel}
+        isLoading={loggingOut}
+      />
     </>
   );
 };
