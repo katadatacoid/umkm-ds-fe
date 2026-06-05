@@ -32,7 +32,7 @@ const HeadSummary: React.FC<HeadSummaryProps> = ({
       </div>
 
       {/* Kanan: Dinamis - Search atau Button */}
-      {/* <div className="relative w-full sm:w-auto mt-3 sm:mt-0">
+      <div className="relative w-full sm:w-auto mt-3 sm:mt-0">
         {mode === "search" ? (
           <>
             <input
@@ -55,7 +55,7 @@ const HeadSummary: React.FC<HeadSummaryProps> = ({
             {buttonLabel}
           </button>
         )}
-      </div> */}
+      </div>
     </div>
   );
 };
