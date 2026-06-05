@@ -108,3 +108,8 @@ export default function AffiliatePage() {
 // };
 
 // export default AffiliateUser;
+
+// Implementasi affiliate dinonaktifkan sementara; placeholder agar route tetap valid.
+export default function AffiliatePage() {
+  return null;
+}
