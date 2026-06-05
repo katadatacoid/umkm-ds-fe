@@ -1,9 +1,3 @@
-// src/app/user/affiliate/page.tsx
-// import { redirect } from "next/navigation";
-
-// export default function AffiliatePage() {
-//   redirect("/user"); // arahkan ke dashboard utama
-// }
 
 // src/app/user/affiliate/page.tsx
 export default function AffiliatePage() {

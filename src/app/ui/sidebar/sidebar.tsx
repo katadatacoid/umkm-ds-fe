@@ -190,7 +190,6 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, links, getLink
             </div>
           </div>
 
-          {/* ← onClick sekarang membuka modal, bukan window.confirm */}
           <button
             type="button"
             onClick={handleLogoutClick}

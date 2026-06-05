@@ -146,7 +146,16 @@ const DashboardUserLayout: React.FC<DashboardLayoutProps> = ({ children, path })
     menuKey: null,
     tooltipKey: "about us",
   },
-  // ↓ Label & tooltipKey berubah untuk template 1
+
+  // {
+    //   href: `/${path}/affiliate`,
+    //   icon: faShareAlt,
+    //   label: "Affiliate",
+    //   hasDivider: false,
+    //   menuKey: null,
+    //   tooltipKey: "affiliate",
+    // },
+
   {
     href: `/${path}/storefront/footer`,
     icon: faWindowMinimize,

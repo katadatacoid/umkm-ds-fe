@@ -148,7 +148,7 @@ export const NAV_TOOLTIP_CONTENT: Record<string, NavTooltipContent> = {
   "about us": {
   title: "About Us",
   description:
-    "Ceritakan siapa Anda di balik toko ini — visi, misi, dan kisah brand Anda. Halaman ini membangun koneksi emosional dengan pelanggan dan memperkuat identitas bisnis.",
+    "Ceritakan bisnis Anda di balik tentang kami ini — visi, misi, dan kisah bisnis Anda. Halaman ini membangun koneksi emosional dengan pelanggan dan memperkuat identitas bisnis.",
   accentColor: "bg-teal-500",
   badgeColor: "bg-teal-50",
   badgeText: "text-teal-600",
@@ -171,7 +171,7 @@ sidebar: {
   accentColor: "bg-slate-500",
   badgeColor: "bg-slate-50",
   badgeText: "text-slate-600",
-  image: "/images/umkm/sidebar-section.webp", // ← pastikan sudah rename, hapus spasi
+  image: "/images/umkm/sidebar-section.webp",
   icon: (
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
       <path
