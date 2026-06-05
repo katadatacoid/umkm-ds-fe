@@ -1,3 +1,9 @@
+
+// src/app/user/affiliate/page.tsx
+export default function AffiliatePage() {
+  return null;
+}
+
 // "use client";
 
 // import React from "react";

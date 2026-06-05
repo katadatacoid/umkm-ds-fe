@@ -103,8 +103,6 @@ const DashboardAdminLayout: React.FC<DashboardLayoutProps> = ({ children, path }
         isSidebarOpen ? "ml-0 md:ml-65 " : "ml-0 sm:ml-65"
       }`}
     >
-      {/* Isi konten yang bisa di-scroll. 
-          pb-20: beri ruang untuk MobileNavbar fixed (tinggi ~80px). */}
       <div className="h-full w-full overflow-y-auto  px-2 lg:px-5 pb-20 md:pb-6 mt-2">
       {children}
       </div>

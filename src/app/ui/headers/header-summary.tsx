@@ -31,10 +31,22 @@ const HeadSummary: React.FC<HeadSummaryProps> = ({
         </span>
       </div>
 
-      {/* Kanan: Dinamis - Search atau Button.
-          Search hanya dirender bila ada handler-nya (mode="search" tanpa handler hanya menampilkan judul). */}
-      {mode === "button" ? (
-        <div className="relative w-full sm:w-auto mt-3 sm:mt-0">
+      {/* Kanan: Dinamis - Search atau Button */}
+      <div className="relative w-full sm:w-auto mt-3 sm:mt-0">
+        {mode === "search" ? (
+          <>
+            <input
+              type="text"
+              placeholder="Cari data..."
+              onChange={(e) => onSearchChange?.(e.target.value)}
+              className="pl-9 pr-3 py-2 w-full sm:w-60 md:w-72 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+            />
+            <FontAwesomeIcon
+              icon={faMagnifyingGlass}
+              className="absolute left-3 top-2.5 text-gray-400 h-4 w-4"
+            />
+          </>
+        ) : (
           <button
             onClick={onButtonClick}
             className="w-full sm:w-auto flex items-center justify-center gap-2 bg-green-c hover:bg-green-700 text-white text-sm sm:text-base font-medium px-4 py-2 rounded-md transition-colors duration-200"
@@ -42,21 +54,8 @@ const HeadSummary: React.FC<HeadSummaryProps> = ({
             <FontAwesomeIcon icon={buttonIcon} className="h-4 w-4" />
             {buttonLabel}
           </button>
-        </div>
-      ) : onSearchChange ? (
-        <div className="relative w-full sm:w-auto mt-3 sm:mt-0">
-          <input
-            type="text"
-            placeholder="Cari data..."
-            onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-9 pr-3 py-2 w-full sm:w-60 md:w-72 border rounded-md text-sm text-gray-700 focus:outline-none focus:ring-2 focus:ring-green-500"
-          />
-          <FontAwesomeIcon
-            icon={faMagnifyingGlass}
-            className="absolute left-3 top-2.5 text-gray-400 h-4 w-4"
-          />
-        </div>
-      ) : null}
+        )}
+      </div>
     </div>
   );
 };
